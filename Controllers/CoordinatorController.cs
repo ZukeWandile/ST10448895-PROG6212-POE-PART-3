@@ -80,7 +80,7 @@ namespace ST10448895_CMCS_PROG.Controllers
             return RedirectToAction("Verify");
         }
 
-        //  Download encrypted file (decrypts before returning)
+        //   Download encrypted file (decrypts before returning)
         public IActionResult DownloadDocument(int id)
         {
             var document = _context.UploadDocuments.FirstOrDefault(d => d.Id == id);
