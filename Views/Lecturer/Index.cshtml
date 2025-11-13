@@ -1,0 +1,83 @@
+﻿@model IEnumerable<ST10448895_CMCS_PROG.Models.ClaimModel>
+
+@{
+    ViewData["Title"] = "My Claims";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>My Claims - @ViewBag.LecturerName</h2>
+        <div>
+            <a asp-action="Submit" class="btn btn-primary">Submit New Claim</a>
+            <a asp-controller="Login" asp-action="Logout" class="btn btn-outline-secondary">Logout</a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    <div class="card">
+        <div class="card-header">
+            <h5>My Claims (@Model.Count())</h5>
+        </div>
+        <div class="card-body">
+            @if (!Model.Any())
+            {
+                <p class="text-center text-muted">No claims submitted yet.</p>
+                <div class="text-center">
+                    <a asp-action="Submit" class="btn btn-primary">Submit Your First Claim</a>
+                </div>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Description</th>
+                            <th>Hours</th>
+                            <th>Rate</th>
+                            <th>Total</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var claim in Model.OrderByDescending(c => c.SubmitDate))
+                        {
+                            <tr>
+                                <td>#@claim.Id</td>
+                                <td>@claim.Description</td>
+                                <td>@claim.HoursWorked</td>
+                                <td>@claim.HourlyRate.ToString("C")</td>
+                                <td>@claim.TotalAmount.ToString("C")</td>
+                                <td>@claim.SubmitDate.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                    @if (claim.Status == "Approved")
+                                    {
+                                        <span class="badge bg-success">@claim.Status</span>
+                                    }
+                                    else if (claim.Status == "Under Review")
+                                    {
+                                        <span class="badge bg-warning">@claim.Status</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">@claim.Status</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-action="Track" asp-route-id="@claim.Id" class="btn btn-sm btn-info">Track</a>
+                                    <a asp-action="Documents" asp-route-claimId="@claim.Id" class="btn btn-sm btn-secondary">Files</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+</div>

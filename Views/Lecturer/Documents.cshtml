@@ -1,0 +1,86 @@
+﻿@model IEnumerable<ST10448895_CMCS_PROG.Models.UploadDocumentModel>
+
+@{
+    ViewData["Title"] = "Manage Documents";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Documents for Claim #@ViewBag.ClaimId</h2>
+        <a asp-action="Index" class="btn btn-secondary">Back to Claims</a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <div class="row">
+        <!-- Upload New Document -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5>Upload Document</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" asp-action="Submit" enctype="multipart/form-data">
+                        <input type="hidden" name="claimId" value="@ViewBag.ClaimId" />
+
+                        <div class="mb-3">
+                            <label class="form-label">Select File:</label>
+                            <input type="file" name="Documents" class="form-control" required accept=".pdf,.docx,.xlsx" multiple>
+                            <small class="form-text text-muted">Max 5MB - PDF, DOCX, XLSX</small>
+                        </div>
+
+                        <button type="submit" class="btn btn-success">Upload & Encrypt</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Existing Documents -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5>Uploaded Documents (@Model.Count())</h5>
+                </div>
+                <div class="card-body">
+                    @if (!Model.Any())
+                    {
+                        <p class="text-muted">No documents uploaded yet.</p>
+                    }
+                    else
+                    {
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>File Name</th>
+                                    <th>Date</th>
+                                    <th>Size</th>
+                                    <th>Download</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var doc in Model.OrderByDescending(d => d.UploadedAt))
+                                {
+                                    <tr>
+                                        <td>@doc.OriginalFilename</td>
+                                        <td>@doc.UploadedAt.ToString("dd/MM/yyyy")</td>
+                                        <td>@((doc.FileSize / 1024.0).ToString("F0")) KB</td>
+                                        <td>
+                                            <a asp-action="DownloadDocument" asp-route-id="@doc.Id" class="btn btn-sm btn-outline-primary">Download</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

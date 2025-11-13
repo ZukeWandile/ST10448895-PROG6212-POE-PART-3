@@ -1,0 +1,77 @@
+﻿@{
+    ViewData["Title"] = "Welcome to CMCS";
+}
+
+<div class="container-fluid vh-100 d-flex align-items-center justify-content-center">
+    <div class="row w-100">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-body p-5 text-center">
+                    <h1 class="display-4 mb-4">Contract Monthly Claim System</h1>
+                    <p class="lead text-muted mb-4">Streamlined claims management for academic institutions</p>
+
+                    @if (string.IsNullOrEmpty(Context.Session.GetString("UserRole")))
+                    {
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <h5>Lecturers</h5>
+                                        <p>Submit and track your monthly claims</p>                                        
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <h5>Coordinators</h5>
+                                        <p>Verify claims for accuracy</p>                                       
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <h5>Managers</h5>
+                                        <p>Final approval and reporting</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <a asp-controller="Login" asp-action="Index" class="btn btn-primary btn-lg">Get Started - Login</a>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <h5>Welcome back, @Context.Session.GetString("UserName")!</h5>
+                            <p class="mb-0">You are logged in as: <strong>@Context.Session.GetString("UserRole")</strong></p>
+                        </div>
+
+                        <div class="mt-4">
+                            @{
+                                var role = Context.Session.GetString("UserRole");
+                            }
+                            @if (role == "Lecturer")
+                            {
+                                <a asp-controller="Lecturer" asp-action="Index" class="btn btn-success btn-lg me-3">Go to My Claims</a>
+                            }
+                            else if (role == "Coordinator")
+                            {
+                                <a asp-controller="Coordinator" asp-action="Index" class="btn btn-warning btn-lg me-3">Go to Dashboard</a>
+                            }
+                            else if (role == "Manager")
+                            {
+                                <a asp-controller="Manager" asp-action="Index" class="btn btn-primary btn-lg me-3">Go to Dashboard</a>
+                            }
+
+                            <a asp-controller="Login" asp-action="Logout" class="btn btn-outline-secondary">Logout</a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

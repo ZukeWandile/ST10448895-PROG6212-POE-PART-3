@@ -1,0 +1,78 @@
+﻿@model IEnumerable<ST10448895_CMCS_PROG.Models.ClaimModel>
+
+@{
+    ViewData["Title"] = "Verify Claims";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Verify Claims</h2>
+        <a asp-action="Index" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info text-center">
+            <h4>No claims pending verification</h4>
+        </div>
+    }
+    else
+    {
+        @foreach (var claim in Model)
+        {
+            <div class="card mb-3 shadow-sm">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5>Claim #@claim.Id - Lecturer @claim.LecturerId</h5>
+                            <p><strong>Description:</strong> @claim.Description</p>
+                            <p>
+                                <strong>Hours:</strong> @claim.HoursWorked |
+                                <strong>Rate:</strong> @claim.HourlyRate.ToString("C") |
+                                <strong>Total:</strong> @claim.TotalAmount.ToString("C")
+                            </p>
+                            <small class="text-muted">Submitted: @claim.SubmitDate.ToString("dd MMMM yyyy")</small>
+
+                            @if (claim.Documents != null && claim.Documents.Any())
+                            {
+                                <hr />
+                                <p><strong>Uploaded Documents:</strong></p>
+                                <ul>
+                                    @foreach (var doc in claim.Documents)
+                                    {
+                                        <li>
+                                            <i class="bi bi-file-earmark-text"></i> @doc.OriginalFilename
+                                            <a asp-action="DownloadDocument" asp-route-id="@doc.Id" class="btn btn-link btn-sm text-decoration-none">Download</a>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p class="text-muted"><em>No documents uploaded.</em></p>
+                            }
+                        </div>
+
+                        <div class="col-md-4">
+                            <form method="post" asp-action="VerifyClaim">
+                                <input type="hidden" name="claimId" value="@claim.Id" />
+
+                                <div class="mb-2">
+                                    <textarea name="notes" class="form-control" rows="2" placeholder="Verification notes..."></textarea>
+                                </div>
+
+                                <button type="submit" name="action" value="verify" class="btn btn-success btn-sm">Verify</button>
+                                <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm">Reject</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>

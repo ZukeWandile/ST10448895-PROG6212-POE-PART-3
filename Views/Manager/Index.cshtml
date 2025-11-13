@@ -1,0 +1,118 @@
+﻿@model ST10448895_CMCS_PROG.Models.ViewModels.DashboardViewModel
+
+@{
+    ViewData["Title"] = "Manager Dashboard";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Manager Dashboard - @ViewBag.ManagerName</h2>
+        <div>
+            <a asp-action="Approve" class="btn btn-success">Approve Claims (@Model.PendingClaims)</a>
+            <a asp-action="Reports" class="btn btn-info">Reports</a>
+            <a asp-controller="Login" asp-action="Logout" class="btn btn-outline-secondary">Logout</a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    <!-- Summary -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4>@Model.TotalClaims</h4>
+                    <p>Total</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4>@Model.PendingClaims</h4>
+                    <p>Pending</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4>@Model.ApprovedClaims</h4>
+                    <p>Approved</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4>@Model.RejectedClaims</h4>
+                    <p>Rejected</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4>@Model.TotalAmount.ToString("C0")</h4>
+                    <p>Total Value</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4>@Model.PendingAmount.ToString("C0")</h4>
+                    <p>Pending Value</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Claims -->
+    <div class="card">
+        <div class="card-header">
+            <h5>Recent Claims Activity</h5>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Lecturer</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Verified</th>
+                        <th>Approved</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var claim in Model.RecentClaims)
+                    {
+                        <tr>
+                            <td>#@claim.Id</td>
+                            <td>Lecturer @claim.LecturerId</td>
+                            <td>@claim.TotalAmount.ToString("C")</td>
+                            <td>@claim.SubmitDate.ToString("dd/MM/yyyy")</td>
+                            <td><span class="badge @(claim.Verified ? "bg-success" : "bg-secondary")">@(claim.Verified ? "Yes" : "No")</span></td>
+                            <td><span class="badge @(claim.Approved ? "bg-success" : "bg-secondary")">@(claim.Approved ? "Yes" : "No")</span></td>
+                            <td>
+                                @if (claim.Verified && !claim.Approved)
+                                {
+                                    <a asp-action="Approve" class="btn btn-sm btn-success">Approve</a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
