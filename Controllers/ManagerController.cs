@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ST10448895_CMCS_PROG.Attributes;
 using ST10448895_CMCS_PROG.Data;
 using ST10448895_CMCS_PROG.Models;
 using ST10448895_CMCS_PROG.Models.ViewModels;
@@ -8,6 +9,7 @@ using System.Text;
 
 namespace ST10448895_CMCS_PROG.Controllers
 {
+    [AuthorizeRole("Manager")]
     public class ManagerController : Controller
     {
         private readonly ApplicationDbContext _context;

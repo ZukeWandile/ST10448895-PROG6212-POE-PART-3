@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿
+using Microsoft.EntityFrameworkCore;
 using ST10448895_CMCS_PROG.Models;
 
 namespace ST10448895_CMCS_PROG.Data
@@ -13,46 +14,32 @@ namespace ST10448895_CMCS_PROG.Data
         public DbSet<LecturerModel> Lecturers { get; set; }
         public DbSet<CoordinatorModel> Coordinators { get; set; }
         public DbSet<ManagerModel> Managers { get; set; }
+        public DbSet<HR> HRStaff { get; set; }
         public DbSet<ClaimModel> Claims { get; set; }
         public DbSet<ApprovalModel> Approvals { get; set; }
         public DbSet<UploadDocumentModel> UploadDocuments { get; set; }
-        public DbSet<User> Users { get; set; }
+        public DbSet<Module> Modules { get; set; }
+        public DbSet<LecturerModule> LecturerModules { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Seed Lecturers
-            modelBuilder.Entity<LecturerModel>().HasData(
-                new LecturerModel { Id = 1, Name = "John Smith", Email = "john.smith@college.edu" },
-                new LecturerModel { Id = 2, Name = "Mary Johnson", Email = "mary.johnson@college.edu" }
-            );
+            // Relationships
+            modelBuilder.Entity<ClaimModel>()
+                .HasOne(c => c.Lecturer)
+                .WithMany(l => l.Claims)
+                .HasForeignKey(c => c.LecturerId);
 
-            // Seed Coordinators
-            modelBuilder.Entity<CoordinatorModel>().HasData(
-                new CoordinatorModel { Id = 1, Name = "Dr. Linda Brown" }
-            );
+            modelBuilder.Entity<LecturerModule>()
+                .HasOne(lm => lm.Lecturer)
+                .WithMany(l => l.LecturerModules)
+                .HasForeignKey(lm => lm.LecturerId);
 
-            // Seed Managers
-            modelBuilder.Entity<ManagerModel>().HasData(
-                new ManagerModel { Id = 1, Name = "Prof. Alan White" }
-            );
-
-            // Seed a sample claim
-            modelBuilder.Entity<ClaimModel>().HasData(
-                new ClaimModel
-                {
-                    Id = 1,
-                    LecturerId = 1,
-                    HoursWorked = 5,
-                    HourlyRate = 300,
-                    Description = "Cybersecurity workshop claim",
-                    SubmitDate = DateTime.Now,
-                    Status = "Pending",
-                    Verified = false,
-                    Approved = false
-                }
-            );
+            modelBuilder.Entity<LecturerModule>()
+                .HasOne(lm => lm.Module)
+                .WithMany(m => m.LecturerModules)
+                .HasForeignKey(lm => lm.ModuleId);
         }
     }
 }
