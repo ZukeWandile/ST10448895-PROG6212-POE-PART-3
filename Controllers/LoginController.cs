@@ -23,57 +23,88 @@ namespace ST10448895_CMCS_PROG.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult Index(Login model)
+        public async Task<IActionResult> Index(Login model)
         {
-            if (!ModelState.IsValid)
-                return View(model);
-
-            // Check which role the user selected and verify from DB
-            switch (model.Role)
+            if (ModelState.IsValid)
             {
-                case "Lecturer":
-                    var lecturer = _context.Lecturers.FirstOrDefault(l => l.Name == model.Name);
+                HttpContext.Session.SetString("UserRole", model.Role);
+                HttpContext.Session.SetString("UserName", model.Name);
+
+                int userId = 0;
+
+                if (model.Role == "Lecturer")
+                {
+                    var lecturer = await _context.Lecturers
+                        .FirstOrDefaultAsync(l => l.Name == model.Name);
+
                     if (lecturer == null)
                     {
-                        ModelState.AddModelError("", "Lecturer not found.");
+                        TempData["Error"] = "Lecturer not found. Please contact HR.";
                         return View(model);
                     }
 
-                    HttpContext.Session.SetString("UserRole", "Lecturer");
-                    HttpContext.Session.SetString("UserName", lecturer.Name);
-                    HttpContext.Session.SetInt32("UserId", lecturer.Id);
-                    return RedirectToAction("Index", "Lecturer");
+                    userId = lecturer.Id;
+                }
+                else if (model.Role == "Coordinator")
+                {
+                    var coordinator = await _context.Coordinators
+                        .FirstOrDefaultAsync(c => c.Name == model.Name);
 
-                case "Coordinator":
-                    var coordinator = _context.Coordinators.FirstOrDefault(c => c.Name == model.Name);
                     if (coordinator == null)
                     {
-                        ModelState.AddModelError("", "Coordinator not found.");
-                        return View(model);
+                        coordinator = new CoordinatorModel { Name = model.Name };
+                        _context.Coordinators.Add(coordinator);
+                        await _context.SaveChangesAsync();
                     }
 
-                    HttpContext.Session.SetString("UserRole", "Coordinator");
-                    HttpContext.Session.SetString("UserName", coordinator.Name);
-                    HttpContext.Session.SetInt32("UserId", coordinator.Id);
-                    return RedirectToAction("Index", "Coordinator");
+                    userId = coordinator.Id;
+                }
+                else if (model.Role == "Manager")
+                {
+                    var manager = await _context.Managers
+                        .FirstOrDefaultAsync(m => m.Name == model.Name);
 
-                case "Manager":
-                    var manager = _context.Managers.FirstOrDefault(m => m.Name == model.Name);
                     if (manager == null)
                     {
-                        ModelState.AddModelError("", "Manager not found.");
-                        return View(model);
+                        manager = new ManagerModel { Name = model.Name };
+                        _context.Managers.Add(manager);
+                        await _context.SaveChangesAsync();
                     }
 
-                    HttpContext.Session.SetString("UserRole", "Manager");
-                    HttpContext.Session.SetString("UserName", manager.Name);
-                    HttpContext.Session.SetInt32("UserId", manager.Id);
-                    return RedirectToAction("Index", "Manager");
+                    userId = manager.Id;
+                }
+                else if (model.Role == "HR")
+                {
+                    var hr = await _context.HRStaff
+                        .FirstOrDefaultAsync(h => h.Name == model.Name);
 
-                default:
-                    ModelState.AddModelError("", "Invalid role selected.");
-                    return View(model);
+                    if (hr == null)
+                    {
+                        hr = new HR
+                        {
+                            Name = model.Name,
+                            Email = $"{model.Name.Replace(" ", "").ToLower()}@iieMSA.edu.za"
+                        };
+                        _context.HRStaff.Add(hr);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    userId = hr.Id;
+                }
+
+                HttpContext.Session.SetInt32("UserId", userId);
+
+                return model.Role switch
+                {
+                    "Lecturer" => RedirectToAction("Index", "Lecturer"),
+                    "Coordinator" => RedirectToAction("Index", "Coordinator"),
+                    "Manager" => RedirectToAction("Index", "Manager"),
+                    "HR" => RedirectToAction("Index", "HR"),
+                    _ => RedirectToAction("Index", "Home")
+                };
             }
+
+            return View(model);
         }
 
         public IActionResult Logout()
