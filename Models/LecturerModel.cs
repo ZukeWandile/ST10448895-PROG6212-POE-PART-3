@@ -7,15 +7,15 @@ namespace ST10448895_CMCS_PROG.Models
         public int Id { get; set; }
 
         [Required]
-        [Display(Name = "Lecturer Name")]
         public string Name { get; set; } = string.Empty;
 
         [Required]
         [EmailAddress]
-        [Display(Name = "Email Address")]
         public string Email { get; set; } = string.Empty;
 
-        // Navigation property
+        public string? Department { get; set; }
+
         public virtual ICollection<ClaimModel> Claims { get; set; } = new List<ClaimModel>();
+        public virtual ICollection<LecturerModule> LecturerModules { get; set; } = new List<LecturerModule>();
     }
 }
