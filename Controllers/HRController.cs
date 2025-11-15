@@ -6,7 +6,7 @@ using ST10448895_CMCS_PROG.Models;
 
 namespace ST10448895_CMCS_PROG.Controllers
 {
-    [AuthorizeRole("HR")] // SECURITY: Only HR can access this controller
+    [AuthorizeRole("HR")]
     public class HRController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -16,19 +16,26 @@ namespace ST10448895_CMCS_PROG.Controllers
             _context = context;
         }
 
-        // HR Dashboard
+        // HR DASHBOARD - FIXED: Manual loading of modules
         public async Task<IActionResult> Index()
         {
-            var lecturers = await _context.Lecturers
-                .Include(l => l.LecturerModules)
-                .ThenInclude(lm => lm.Module)
-                .ToListAsync();
+            var lecturers = await _context.Lecturers.ToListAsync();
+
+            // Manually load module count for each lecturer
+            foreach (var lecturer in lecturers)
+            {
+                var moduleCount = await _context.LecturerModules
+                    .CountAsync(lm => lm.LecturerId == lecturer.Id);
+
+                // Store count in ViewBag or create a simple list
+                ViewData[$"ModuleCount_{lecturer.Id}"] = moduleCount;
+            }
 
             ViewBag.HRName = HttpContext.Session.GetString("UserName");
             return View(lecturers);
         }
 
-        // Create Lecturer
+        // CREATE LECTURER
         public IActionResult CreateLecturer()
         {
             return View();
@@ -50,7 +57,7 @@ namespace ST10448895_CMCS_PROG.Controllers
             return View(lecturer);
         }
 
-        // Edit Lecturer
+        // EDIT LECTURER
         public async Task<IActionResult> EditLecturer(int id)
         {
             var lecturer = await _context.Lecturers.FindAsync(id);
@@ -79,21 +86,29 @@ namespace ST10448895_CMCS_PROG.Controllers
             return View(lecturer);
         }
 
-        // View Lecturer Details
+        // LECTURER DETAILS - FIXED: Manual loading
         public async Task<IActionResult> LecturerDetails(int id)
         {
-            var lecturer = await _context.Lecturers
-                .Include(l => l.LecturerModules)
-                .ThenInclude(lm => lm.Module)
-                .FirstOrDefaultAsync(l => l.Id == id);
-
+            var lecturer = await _context.Lecturers.FindAsync(id);
             if (lecturer == null)
                 return NotFound();
 
+            // Load modules separately
+            var modules = await _context.LecturerModules
+                .Where(lm => lm.LecturerId == id)
+                .ToListAsync();
+
+            // Load module details for each assignment
+            foreach (var lm in modules)
+            {
+                lm.Module = await _context.Modules.FindAsync(lm.ModuleId);
+            }
+
+            ViewBag.AssignedModules = modules;
             return View(lecturer);
         }
 
-        // Delete Lecturer
+        // DELETE LECTURER
         [HttpPost]
         public async Task<IActionResult> DeleteLecturer(int id)
         {
@@ -108,14 +123,14 @@ namespace ST10448895_CMCS_PROG.Controllers
             return RedirectToAction("Index");
         }
 
-        // MODULE MANAGEMENT
-
+        // MODULES LIST
         public async Task<IActionResult> Modules()
         {
             var modules = await _context.Modules.ToListAsync();
             return View(modules);
         }
 
+        // CREATE MODULE
         public IActionResult CreateModule()
         {
             return View();
@@ -137,8 +152,7 @@ namespace ST10448895_CMCS_PROG.Controllers
             return View(module);
         }
 
-        // ASSIGN MODULE & RATE 
-
+        // ASSIGN MODULE FORM
         public async Task<IActionResult> AssignModule()
         {
             ViewBag.Lecturers = await _context.Lecturers.ToListAsync();
@@ -146,6 +160,7 @@ namespace ST10448895_CMCS_PROG.Controllers
             return View();
         }
 
+        // ASSIGN MODULE - SUBMIT
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AssignModule(int lecturerId, int moduleId, decimal hourlyRate)
@@ -176,20 +191,21 @@ namespace ST10448895_CMCS_PROG.Controllers
             return RedirectToAction("Index");
         }
 
-        // Update Rate
+        // UPDATE RATE FORM
         public async Task<IActionResult> UpdateRate(int id)
         {
-            var assignment = await _context.LecturerModules
-                .Include(lm => lm.Lecturer)
-                .Include(lm => lm.Module)
-                .FirstOrDefaultAsync(lm => lm.Id == id);
-
+            var assignment = await _context.LecturerModules.FindAsync(id);
             if (assignment == null)
                 return NotFound();
+
+            // Load lecturer and module details
+            assignment.Lecturer = await _context.Lecturers.FindAsync(assignment.LecturerId);
+            assignment.Module = await _context.Modules.FindAsync(assignment.ModuleId);
 
             return View(assignment);
         }
 
+        // UPDATE RATE - SUBMIT
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateRate(int id, decimal hourlyRate)
@@ -205,7 +221,7 @@ namespace ST10448895_CMCS_PROG.Controllers
             return RedirectToAction("LecturerDetails", new { id = assignment.LecturerId });
         }
 
-        // Remove Assignment
+        // REMOVE ASSIGNMENT
         [HttpPost]
         public async Task<IActionResult> RemoveAssignment(int id)
         {

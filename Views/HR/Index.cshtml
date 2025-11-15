@@ -1,5 +1,4 @@
-﻿<!-- Views/HR/Index.cshtml - Complete HR Dashboard -->
-@model IEnumerable<ST10448895_CMCS_PROG.Models.LecturerModel>
+﻿@model IEnumerable<ST10448895_CMCS_PROG.Models.LecturerModel>
 
 @{
     ViewData["Title"] = "HR Dashboard";
@@ -126,9 +125,12 @@
                                         }
                                     </td>
                                     <td>
-                                        @if (lecturer.LecturerModules.Any())
+                                        @{
+                                            var moduleCount = (int)(ViewData[$"ModuleCount_{lecturer.Id}"] ?? 0);
+                                        }
+                                        @if (moduleCount > 0)
                                         {
-                                            <span class="badge bg-success">@lecturer.LecturerModules.Count Module(s)</span>
+                                            <span class="badge bg-success">@moduleCount Module(s)</span>
                                         }
                                         else
                                         {

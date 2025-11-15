@@ -24,8 +24,8 @@ namespace ST10448895_CMCS_PROG.Controllers
             _environment = environment;
         }
 
-        // LECTURER DASHBOARD (Claims)
-        public IActionResult Index()
+        // LECTURER DASHBOARD - FIXED: Removed .Include() navigation
+        public async Task<IActionResult> Index()
         {
             var lecturerId = HttpContext.Session.GetInt32("UserId");
             var lecturerName = HttpContext.Session.GetString("UserName");
@@ -33,14 +33,16 @@ namespace ST10448895_CMCS_PROG.Controllers
             if (lecturerId == null)
                 return RedirectToAction("Index", "Login");
 
-            var claims = _context.Claims
+            // Simple query without navigation properties
+            var claims = await _context.Claims
                 .Where(c => c.LecturerId == lecturerId)
-                .Include(c => c.Documents)
-                .ToList();
+                .OrderByDescending(c => c.SubmitDate)
+                .ToListAsync();
 
             ViewBag.LecturerName = lecturerName;
             return View(claims);
         }
+
         // SUBMIT CLAIM FORM
         public IActionResult Submit()
         {
@@ -75,7 +77,6 @@ namespace ST10448895_CMCS_PROG.Controllers
             await _context.SaveChangesAsync();
 
             // DOCUMENT UPLOAD WITH ENCRYPTION
-
             if (Documents != null && Documents.Any())
             {
                 string uploadDir = Path.Combine(_environment.WebRootPath, "uploads");
@@ -127,12 +128,13 @@ namespace ST10448895_CMCS_PROG.Controllers
             TempData["Success"] = "Claim submitted successfully!";
             return RedirectToAction(nameof(Index));
         }
+
         // VIEW DOCUMENTS PER CLAIM
-        public IActionResult Documents(int claimId)
+        public async Task<IActionResult> Documents(int claimId)
         {
-            var documents = _context.UploadDocuments
+            var documents = await _context.UploadDocuments
                 .Where(d => d.ClaimId == claimId)
-                .ToList();
+                .ToListAsync();
 
             ViewBag.ClaimId = claimId;
             return View(documents);
@@ -157,13 +159,11 @@ namespace ST10448895_CMCS_PROG.Controllers
             return File(memoryStream.ToArray(), document.ContentType, document.OriginalFilename);
         }
 
-        // TRACK CLAIM STATUS
-     
-        public IActionResult Track(int id)
+        // TRACK CLAIM STATUS - FIXED: Removed .Include() navigation
+        public async Task<IActionResult> Track(int id)
         {
-            var claim = _context.Claims
-                .Include(c => c.Documents)
-                .FirstOrDefault(c => c.Id == id);
+            var claim = await _context.Claims
+                .FirstOrDefaultAsync(c => c.Id == id);
 
             if (claim == null)
                 return NotFound();

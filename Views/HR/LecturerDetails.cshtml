@@ -1,0 +1,78 @@
+﻿@model ST10448895_CMCS_PROG.Models.LecturerModel
+
+@{
+    ViewData["Title"] = "Lecturer Details";
+    var assignedModules = ViewBag.AssignedModules as List<ST10448895_CMCS_PROG.Models.LecturerModule> ?? new List<ST10448895_CMCS_PROG.Models.LecturerModule>();
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>@Model.Name</h2>
+        <div>
+            <a asp-action="EditLecturer" asp-route-id="@Model.Id" class="btn btn-primary">Edit</a>
+            <a asp-action="Index" class="btn btn-secondary">Back</a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Email:</strong> @Model.Email</p>
+                    <p><strong>Department:</strong> @Model.Department</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Assigned Modules</h5>
+                </div>
+                <div class="card-body">
+                    @if (!assignedModules.Any())
+                    {
+                        <p class="text-muted">No modules assigned.</p>
+                    }
+                    else
+                    {
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Module Code</th>
+                                    <th>Module Name</th>
+                                    <th>Hourly Rate</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var assignment in assignedModules)
+                                {
+                                    <tr>
+                                        <td>@assignment.Module?.ModuleCode</td>
+                                        <td>@assignment.Module?.ModuleName</td>
+                                        <td>@assignment.HourlyRate.ToString("C")</td>
+                                        <td>
+                                            <a asp-action="UpdateRate" asp-route-id="@assignment.Id" class="btn btn-sm btn-warning">Update Rate</a>
+                                            <form asp-action="RemoveAssignment" asp-route-id="@assignment.Id" method="post" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Remove this assignment?')">Remove</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
