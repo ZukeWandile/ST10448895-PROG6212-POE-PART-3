@@ -1,39 +1,39 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ST10448895_CMCS_PROG.Models
 {
+    [Table("UploadDocuments")]
     public class UploadDocumentModel
     {
         public int Id { get; set; }
 
         [Required]
-        [Display(Name = "Claim")]
         public int ClaimId { get; set; }
 
         [Required]
-        [Display(Name = "File Name")]
         [StringLength(255)]
         public string Filename { get; set; } = string.Empty;
 
-        [Display(Name = "Original File Name")]
+        [Required]
         [StringLength(255)]
         public string OriginalFilename { get; set; } = string.Empty;
 
-        [Display(Name = "File Size")]
+        [Required]
         public long FileSize { get; set; }
 
-        [Display(Name = "Content Type")]
+        [Required]
         [StringLength(100)]
         public string ContentType { get; set; } = string.Empty;
 
-        [Display(Name = "Upload Date")]
+        [Required]
         public DateTime UploadedAt { get; set; } = DateTime.Now;
 
-        [Display(Name = "File Path")]
+        [Required]
         [StringLength(500)]
         public string FilePath { get; set; } = string.Empty;
 
-        // Navigation property
+        [ForeignKey("ClaimId")]
         public virtual ClaimModel? Claim { get; set; }
     }
 }

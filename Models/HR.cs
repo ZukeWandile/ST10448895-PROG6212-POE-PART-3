@@ -1,10 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ST10448895_CMCS_PROG.Models
 {
+    [Table("HRStaff")]
     public class HR
     {
-
         public int Id { get; set; }
 
         [Required]
@@ -13,6 +14,5 @@ namespace ST10448895_CMCS_PROG.Models
         [Required]
         [EmailAddress]
         public string Email { get; set; } = string.Empty;
-
     }
 }

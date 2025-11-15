@@ -3,51 +3,51 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ST10448895_CMCS_PROG.Models
 {
+    [Table("Claims")]
     public class ClaimModel
     {
         public int Id { get; set; }
 
         [Required]
-        [Display(Name = "Lecturer")]
         public int LecturerId { get; set; }
 
         [Required]
-        [Display(Name = "Hours Worked")]
-        [Range(1, 1000, ErrorMessage = "Hours must be between 1 and 1000")]
+        [Range(1, 1000)]
         public int HoursWorked { get; set; }
 
         [Required]
-        [Display(Name = "Hourly Rate")]
-        [Range(0.01, 10000, ErrorMessage = "Hourly rate must be greater than 0")]
         [Column(TypeName = "decimal(18,2)")]
+        [Range(0.01, 10000)]
         public decimal HourlyRate { get; set; }
 
-        [Display(Name = "Total Amount")]
-        [Column(TypeName = "decimal(18,2)")]
+        [NotMapped]
         public decimal TotalAmount => HoursWorked * HourlyRate;
 
-        [Display(Name = "Description")]
-        [StringLength(1000, ErrorMessage = "Description cannot exceed 1000 characters")]
+        [Required]
+        [StringLength(1000)]
         public string Description { get; set; } = string.Empty;
 
-        [Display(Name = "Submit Date")]
+        [Required]
         public DateTime SubmitDate { get; set; } = DateTime.Now;
 
-        [Display(Name = "Status")]
+        [Required]
+        [StringLength(50)]
         public string Status { get; set; } = "Submitted";
 
-        [Display(Name = "Document")]
-        public string? Document { get; set; }
-
-        [Display(Name = "Verified")]
+        [Required]
         public bool Verified { get; set; } = false;
 
-        [Display(Name = "Approved")]
+        [Required]
         public bool Approved { get; set; } = false;
 
-        // Navigation properties
+        // Navigation properties - DO NOT create FK columns
+        [ForeignKey("LecturerId")]
         public virtual LecturerModel? Lecturer { get; set; }
+
+        [NotMapped]
         public virtual ICollection<UploadDocumentModel> Documents { get; set; } = new List<UploadDocumentModel>();
+
+        [NotMapped]
         public virtual ApprovalModel? Approval { get; set; }
     }
 }

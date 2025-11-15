@@ -3,14 +3,11 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add MySQL EF Core configuration
+// Use SQL Server (Azure SQL)
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        new MySqlServerVersion(new Version(8, 0, 36)), // or your MySQL version
-        mySqlOptions => mySqlOptions.EnableRetryOnFailure()
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection")
     ));
-
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddSession();

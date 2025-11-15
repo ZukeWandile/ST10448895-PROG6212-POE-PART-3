@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ST10448895_CMCS_PROG.Models
 {
+    [Table("LecturerModules")]
     public class LecturerModule
     {
         public int Id { get; set; }
@@ -18,7 +19,10 @@ namespace ST10448895_CMCS_PROG.Models
         [Range(50, 5000)]
         public decimal HourlyRate { get; set; }
 
+        [ForeignKey("LecturerId")]
         public virtual LecturerModel? Lecturer { get; set; }
+
+        [ForeignKey("ModuleId")]
         public virtual Module? Module { get; set; }
     }
 }
