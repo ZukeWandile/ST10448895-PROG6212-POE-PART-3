@@ -51,7 +51,7 @@ namespace ST10448895_CMCS_PROG.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Submit(ClaimSubmissionViewModel model, List<IFormFile> Documents)
+        public async Task<IActionResult> Submit(ClaimSubmissionViewModel model, List<IFormFile> Documents, int moduleId)
         {
             var lecturerId = HttpContext.Session.GetInt32("UserId");
 
@@ -61,12 +61,22 @@ namespace ST10448895_CMCS_PROG.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
+            // Get the hourly rate from the lecturer's module assignment
+            var assignment = await _context.LecturerModules
+                .FirstOrDefaultAsync(lm => lm.LecturerId == lecturerId && lm.ModuleId == moduleId);
+
+            if (assignment == null)
+            {
+                TempData["Error"] = "You are not assigned to this module. Please contact HR.";
+                return View(model);
+            }
+
             var claim = new ClaimModel
             {
                 LecturerId = lecturerId.Value,
                 Description = model.Claim.Description,
                 HoursWorked = model.Claim.HoursWorked,
-                HourlyRate = model.Claim.HourlyRate,
+                HourlyRate = assignment.HourlyRate, // Use HR-assigned rate
                 SubmitDate = DateTime.Now,
                 Status = "Pending",
                 Verified = false,
