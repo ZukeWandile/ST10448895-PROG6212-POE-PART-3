@@ -11,15 +11,25 @@
             <div class="card shadow-lg">
                 <div class="card-header bg-primary text-white text-center">
                     <h3 class="mb-0">
-                        <i class="fas fa-university me-2"></i>
+                        <i class="bi bi-building me-2"></i>
                         Contract Monthly Claim System
                     </h3>
                     <p class="mb-0 mt-2">Please login to continue</p>
                 </div>
                 <div class="card-body p-4">
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            @TempData["Error"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
                     @if (!ViewData.ModelState.IsValid)
                     {
                         <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-circle me-2"></i>
                             Please correct the errors below and try again.
                         </div>
                     }
@@ -27,20 +37,21 @@
                     <form asp-action="Index" method="post">
                         <div class="mb-4">
                             <label asp-for="Role" class="form-label fw-bold">
-                                <i class="fas fa-user-tag me-1"></i>Select Your Role
+                                <i class="bi bi-person-badge me-1"></i>Select Your Role
                             </label>
                             <select asp-for="Role" class="form-select form-select-lg" required>
                                 <option value="">-- Choose your role --</option>
                                 <option value="Lecturer">Lecturer</option>
                                 <option value="Coordinator">Programme Coordinator</option>
                                 <option value="Manager">Academic Manager</option>
+                                <option value="HR">Human Resources</option>
                             </select>
                             <span asp-validation-for="Role" class="text-danger"></span>
                         </div>
 
                         <div class="mb-4">
                             <label asp-for="Name" class="form-label fw-bold">
-                                <i class="fas fa-user me-1"></i>Your Name
+                                <i class="bi bi-person me-1"></i>Your Name
                             </label>
                             <input asp-for="Name" class="form-control form-control-lg"
                                    placeholder="Enter your full name" required />
@@ -49,15 +60,51 @@
 
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-sign-in-alt me-2"></i>Login
+                                <i class="bi bi-box-arrow-in-right me-2"></i>Login
                             </button>
                         </div>
                     </form>
                 </div>
                 <div class="card-footer text-center text-muted">
-                    <small>Secure access to the Claims Management System</small>
+                    <small>
+                        <i class="bi bi-shield-lock me-1"></i>
+                        Secure access to the Claims Management System
+                    </small>
+                </div>
+            </div>
+
+            <!-- Role Information Card -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6 class="card-title text-center mb-3">System Roles</h6>
+                    <div class="row text-center small">
+                        <div class="col-3">
+                            <i class="bi bi-person-circle text-success d-block fs-4"></i>
+                            <strong>Lecturer</strong>
+                            <p class="text-muted mb-0">Submit claims</p>
+                        </div>
+                        <div class="col-3">
+                            <i class="bi bi-clipboard-check text-warning d-block fs-4"></i>
+                            <strong>Coordinator</strong>
+                            <p class="text-muted mb-0">Verify claims</p>
+                        </div>
+                        <div class="col-3">
+                            <i class="bi bi-shield-check text-primary d-block fs-4"></i>
+                            <strong>Manager</strong>
+                            <p class="text-muted mb-0">Approve claims</p>
+                        </div>
+                        <div class="col-3">
+                            <i class="bi bi-people text-info d-block fs-4"></i>
+                            <strong>HR</strong>
+                            <p class="text-muted mb-0">Manage staff</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

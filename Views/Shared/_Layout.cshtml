@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿<!-- Views/Shared/_Layout.cshtml - Updated with HR Navigation -->
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -6,6 +7,7 @@
     <title>@ViewData["Title"] - CMCS</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 
     <style>
         body {
@@ -73,6 +75,21 @@
                                 <a class="nav-link" asp-controller="Manager" asp-action="Reports">Reports</a>
                             </li>
                         }
+                        else if (userRole == "HR")
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="HR" asp-action="Index">Dashboard</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="HR" asp-action="CreateLecturer">Add Lecturer</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="HR" asp-action="Modules">Modules</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="HR" asp-action="AssignModule">Assign Module</a>
+                            </li>
+                        }
                     </ul>
 
                     <ul class="navbar-nav">
@@ -102,8 +119,6 @@
     <main role="main" class="pb-3">
         @RenderBody()
     </main>
-
-    
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
