@@ -32,9 +32,9 @@ namespace ST10448895_CMCS_PROG.Controllers
         // VERIFY CLAIMS - FIXED: Load documents separately and create a dictionary
         public async Task<IActionResult> Verify()
         {
-            // Get pending claims without navigation properties
+            // Get pending claims (not verified AND not rejected)
             var pendingClaims = await _context.Claims
-                .Where(c => !c.Verified)
+                .Where(c => !c.Verified && c.Status != "Rejected")
                 .OrderByDescending(c => c.SubmitDate)
                 .ToListAsync();
 
@@ -116,7 +116,7 @@ namespace ST10448895_CMCS_PROG.Controllers
             return RedirectToAction("Verify");
         }
 
-        // DOWNLOAD ENCRYPTED DOCUMENT 
+        // DOWNLOAD ENCRYPTED DOCUMENT - FIXED
         public async Task<IActionResult> DownloadDocument(int id)
         {
             var document = await _context.UploadDocuments.FirstOrDefaultAsync(d => d.Id == id);
