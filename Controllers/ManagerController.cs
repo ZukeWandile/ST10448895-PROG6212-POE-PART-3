@@ -20,74 +20,95 @@ namespace ST10448895_CMCS_PROG.Controllers
             _context = context;
         }
 
-        private bool IsManager()
+        // DASHBOARD
+        public async Task<IActionResult> Index()
         {
-            return HttpContext.Session.GetString("UserRole") == "Manager";
-        }
-
-        public IActionResult Index()
-        {
-            if (!IsManager())
-                return RedirectToAction("Index", "Login");
-
-            var dashboard = BuildManagerDashboard();
+            var dashboard = await BuildManagerDashboard();
             ViewBag.ManagerName = HttpContext.Session.GetString("UserName") ?? "Manager";
             return View(dashboard);
         }
 
-        public IActionResult Approve()
+        // APPROVE CLAIMS 
+        public async Task<IActionResult> Approve()
         {
-            if (!IsManager())
-                return RedirectToAction("Index", "Login");
-
-            var claims = _context.Claims
-                .Include(c => c.Documents)
-                .Where(c => c.Verified && !c.Approved)
+            // Get verified claims that are pending manager approval (not rejected)
+            var verifiedClaims = await _context.Claims
+                .Where(c => c.Verified && !c.Approved && c.Status != "Rejected")
                 .OrderByDescending(c => c.SubmitDate)
-                .ToList();
+                .ToListAsync();
 
-            return View(claims);
+            // Get all documents for these claims in one query
+            var claimIds = verifiedClaims.Select(c => c.Id).ToList();
+            var allDocuments = await _context.UploadDocuments
+                .Where(d => claimIds.Contains(d.ClaimId))
+                .ToListAsync();
+
+            // Create a dictionary for easy lookup in the view
+            var documentsByClaim = allDocuments
+                .GroupBy(d => d.ClaimId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            ViewBag.DocumentsByClaim = documentsByClaim;
+
+            return View(verifiedClaims);
         }
 
+        // APPROVE OR REJECT CLAIM
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult ApproveClaim(int claimId, string action, string? notes)
+        public async Task<IActionResult> ApproveClaim(int claimId, string action, string? notes)
         {
-            if (!IsManager())
-                return RedirectToAction("Index", "Login");
-
-            var claim = _context.Claims.FirstOrDefault(c => c.Id == claimId);
+            var claim = await _context.Claims.FirstOrDefaultAsync(c => c.Id == claimId);
             if (claim == null)
             {
                 TempData["Error"] = "Claim not found.";
                 return RedirectToAction("Approve");
             }
 
+            var managerId = HttpContext.Session.GetInt32("UserId") ?? 0;
+
             if (action == "approve")
             {
                 claim.Approved = true;
                 claim.Status = "Approved";
+
+                // Update approval record with manager approval
+                var approval = await _context.Approvals
+                    .FirstOrDefaultAsync(a => a.ClaimId == claimId);
+
+                if (approval != null)
+                {
+                    approval.ManagerId = managerId;
+                    approval.DateApproved = DateTime.Now;
+                    approval.ApprovalNotes = notes;
+                }
             }
             else if (action == "reject")
             {
                 claim.Approved = false;
                 claim.Status = "Rejected";
+
+                // Update approval record with manager rejection
+                var approval = await _context.Approvals
+                    .FirstOrDefaultAsync(a => a.ClaimId == claimId);
+
+                if (approval != null)
+                {
+                    approval.ManagerId = managerId;
+                    approval.DateApproved = DateTime.Now;
+                    approval.ApprovalNotes = notes ?? "Rejected by manager";
+                }
             }
 
-            if (!string.IsNullOrWhiteSpace(notes))
-                claim.Description += $"\n[Manager Notes: {notes}]";
-
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
             TempData["Success"] = $"Claim #{claimId} {(action == "approve" ? "approved" : "rejected")} successfully!";
             return RedirectToAction("Approve");
         }
 
-        public IActionResult Reports()
+        // REPORTS
+        public async Task<IActionResult> Reports()
         {
-            if (!IsManager())
-                return RedirectToAction("Index", "Login");
-
-            var claims = _context.Claims.ToList();
+            var claims = await _context.Claims.ToListAsync();
 
             var model = new ReportsViewModel
             {
@@ -109,38 +130,62 @@ namespace ST10448895_CMCS_PROG.Controllers
             return View(model);
         }
 
-
-        // Secure download + decryption
-        public IActionResult DownloadDocument(int id)
+        // DOWNLOAD ENCRYPTED DOCUMENT
+        public async Task<IActionResult> DownloadDocument(int id)
         {
-            var document = _context.UploadDocuments.FirstOrDefault(d => d.Id == id);
+            var document = await _context.UploadDocuments.FirstOrDefaultAsync(d => d.Id == id);
             if (document == null)
-                return NotFound();
+            {
+                TempData["Error"] = "Document not found.";
+                return RedirectToAction("Approve");
+            }
 
-            using var aes = Aes.Create();
-            aes.Key = EncryptionKey;
-            aes.IV = new byte[16];
+            // Check if file exists
+            if (!System.IO.File.Exists(document.FilePath))
+            {
+                TempData["Error"] = "File not found on server.";
+                return RedirectToAction("Approve");
+            }
 
-            using var inputStream = new FileStream(document.FilePath, FileMode.Open, FileAccess.Read);
-            using var cryptoStream = new CryptoStream(inputStream, aes.CreateDecryptor(), CryptoStreamMode.Read);
-            using var memoryStream = new MemoryStream();
-            cryptoStream.CopyTo(memoryStream);
+            try
+            {
+                using var aes = Aes.Create();
+                aes.Key = EncryptionKey;
+                aes.IV = new byte[16];
 
-            return File(memoryStream.ToArray(), document.ContentType, document.OriginalFilename);
+                using var inputStream = new FileStream(document.FilePath, FileMode.Open, FileAccess.Read);
+                using var cryptoStream = new CryptoStream(inputStream, aes.CreateDecryptor(), CryptoStreamMode.Read);
+                using var memoryStream = new MemoryStream();
+                cryptoStream.CopyTo(memoryStream);
+
+                var decryptedData = memoryStream.ToArray();
+                return File(decryptedData, document.ContentType, document.OriginalFilename);
+            }
+            catch (CryptographicException ex)
+            {
+                TempData["Error"] = "Error decrypting file. The file may be corrupted.";
+                return RedirectToAction("Approve");
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Error downloading file.";
+                return RedirectToAction("Approve");
+            }
         }
 
-        private DashboardViewModel BuildManagerDashboard()
+        // BUILD DASHBOARD DATA
+        private async Task<DashboardViewModel> BuildManagerDashboard()
         {
-            var claims = _context.Claims.ToList();
+            var claims = await _context.Claims.ToListAsync();
 
             return new DashboardViewModel
             {
                 TotalClaims = claims.Count,
-                PendingClaims = claims.Count(c => c.Verified && !c.Approved),
+                PendingClaims = claims.Count(c => c.Verified && !c.Approved && c.Status != "Rejected"),
                 ApprovedClaims = claims.Count(c => c.Approved),
                 RejectedClaims = claims.Count(c => c.Status == "Rejected"),
                 TotalAmount = claims.Sum(c => c.TotalAmount),
-                PendingAmount = claims.Where(c => c.Verified && !c.Approved).Sum(c => c.TotalAmount),
+                PendingAmount = claims.Where(c => c.Verified && !c.Approved && c.Status != "Rejected").Sum(c => c.TotalAmount),
                 RecentClaims = claims.OrderByDescending(c => c.SubmitDate).Take(5).ToList()
             };
         }

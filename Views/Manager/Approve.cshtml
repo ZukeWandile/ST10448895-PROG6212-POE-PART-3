@@ -1,7 +1,7 @@
 ﻿@model IEnumerable<ST10448895_CMCS_PROG.Models.ClaimModel>
-
 @{
     ViewData["Title"] = "Approve Claims";
+    var documentsByClaim = ViewBag.DocumentsByClaim as Dictionary<int, List<ST10448895_CMCS_PROG.Models.UploadDocumentModel>> ?? new Dictionary<int, List<ST10448895_CMCS_PROG.Models.UploadDocumentModel>>();
 }
 
 <div class="container mt-4">
@@ -14,26 +14,30 @@
     {
         <div class="alert alert-success">@TempData["Success"]</div>
     }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
 
     @if (!Model.Any())
     {
         <div class="alert alert-info text-center">
-            <h4>No claims pending final approval</h4>
+            <h4>No verified claims pending approval</h4>
         </div>
     }
     else
     {
         @foreach (var claim in Model)
         {
+            var documents = documentsByClaim.ContainsKey(claim.Id) ? documentsByClaim[claim.Id] : new List<ST10448895_CMCS_PROG.Models.UploadDocumentModel>();
+
             <div class="card mb-3 shadow-sm">
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-8">
-                            <h5>
-                                Claim #@claim.Id - Lecturer @claim.LecturerId
-                                <span class="badge bg-success">VERIFIED</span>
-                            </h5>
-                            <p><strong>Description:</strong> @claim.Description</p>
+                            <h5>Claim #@claim.Id - Lecturer @claim.LecturerId</h5>
+                            <span class="badge bg-success">Verified by Coordinator</span>
+                            <p class="mt-2"><strong>Description:</strong> @claim.Description</p>
                             <p>
                                 <strong>Hours:</strong> @claim.HoursWorked |
                                 <strong>Rate:</strong> @claim.HourlyRate.ToString("C") |
@@ -41,36 +45,42 @@
                             </p>
                             <small class="text-muted">Submitted: @claim.SubmitDate.ToString("dd MMMM yyyy")</small>
 
-                            @if (claim.Documents != null && claim.Documents.Any())
+                            @if (documents.Any())
                             {
                                 <hr />
                                 <p><strong>Uploaded Documents:</strong></p>
                                 <ul>
-                                    @foreach (var doc in claim.Documents)
+                                    @foreach (var doc in documents)
                                     {
                                         <li>
                                             <i class="bi bi-file-earmark-text"></i> @doc.OriginalFilename
-                                            <a asp-action="DownloadDocument" asp-route-id="@doc.Id" class="btn btn-link btn-sm text-decoration-none">Download</a>
+                                            <a asp-action="DownloadDocument" asp-route-id="@doc.Id" class="btn btn-link btn-sm text-decoration-none">
+                                                <i class="bi bi-download"></i> Download
+                                            </a>
                                         </li>
                                     }
                                 </ul>
                             }
                             else
                             {
+                                <hr />
                                 <p class="text-muted"><em>No documents uploaded.</em></p>
                             }
                         </div>
-
                         <div class="col-md-4">
                             <form method="post" asp-action="ApproveClaim">
+                                @Html.AntiForgeryToken()
                                 <input type="hidden" name="claimId" value="@claim.Id" />
-
                                 <div class="mb-2">
-                                    <textarea name="notes" class="form-control" rows="2" placeholder="Approval notes..."></textarea>
+                                    <label class="form-label">Manager Notes</label>
+                                    <textarea name="notes" class="form-control" rows="3" placeholder="Add approval/rejection notes..."></textarea>
                                 </div>
-
-                                <button type="submit" name="action" value="approve" class="btn btn-success">Approve for Payment</button>
-                                <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm">Reject</button>
+                                <button type="submit" name="action" value="approve" class="btn btn-success btn-sm w-100 mb-1">
+                                    <i class="bi bi-check-circle"></i> Approve
+                                </button>
+                                <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm w-100">
+                                    <i class="bi bi-x-circle"></i> Reject
+                                </button>
                             </form>
                         </div>
                     </div>
