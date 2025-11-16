@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿// Controllers/CoordinatorController.cs - FIXED
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ST10448895_CMCS_PROG.Attributes;
 using ST10448895_CMCS_PROG.Data;
@@ -20,90 +21,130 @@ namespace ST10448895_CMCS_PROG.Controllers
             _context = context;
         }
 
-        private bool IsCoordinator()
+        // DASHBOARD
+        public async Task<IActionResult> Index()
         {
-            return HttpContext.Session.GetString("UserRole") == "Coordinator";
-        }
-
-        public IActionResult Index()
-        {
-            if (!IsCoordinator())
-                return RedirectToAction("Index", "Login");
-
-            var dashboard = BuildCoordinatorDashboard();
+            var dashboard = await BuildCoordinatorDashboard();
             ViewBag.CoordinatorName = HttpContext.Session.GetString("UserName") ?? "Coordinator";
             return View(dashboard);
         }
 
-        public IActionResult Verify()
+        // VERIFY CLAIMS - FIXED: Removed .Include()
+        public async Task<IActionResult> Verify()
         {
-            if (!IsCoordinator())
-                return RedirectToAction("Index", "Login");
-
-            var pendingClaims = _context.Claims
-                .Include(c => c.Documents)
+            // Get pending claims without navigation properties
+            var pendingClaims = await _context.Claims
                 .Where(c => !c.Verified)
                 .OrderByDescending(c => c.SubmitDate)
-                .ToList();
+                .ToListAsync();
+
+            // Manually load documents for each claim
+            foreach (var claim in pendingClaims)
+            {
+                var documents = await _context.UploadDocuments
+                    .Where(d => d.ClaimId == claim.Id)
+                    .ToListAsync();
+
+                // Store in ViewBag for each claim
+                ViewData[$"Documents_{claim.Id}"] = documents;
+            }
 
             return View(pendingClaims);
         }
 
+        // VERIFY OR REJECT CLAIM
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult VerifyClaim(int claimId, string action, string? notes)
+        public async Task<IActionResult> VerifyClaim(int claimId, string action, string? notes)
         {
-            if (!IsCoordinator())
-                return RedirectToAction("Index", "Login");
-
-            var claim = _context.Claims.FirstOrDefault(c => c.Id == claimId);
+            var claim = await _context.Claims.FindAsync(claimId);
             if (claim == null)
             {
                 TempData["Error"] = "Claim not found.";
                 return RedirectToAction("Verify");
             }
 
+            var coordinatorId = HttpContext.Session.GetInt32("UserId") ?? 0;
+
             if (action == "verify")
             {
                 claim.Verified = true;
                 claim.Status = "Verified";
+
+                // Create or update approval record
+                var approval = await _context.Approvals
+                    .FirstOrDefaultAsync(a => a.ClaimId == claimId);
+
+                if (approval == null)
+                {
+                    approval = new ApprovalModel
+                    {
+                        ClaimId = claimId,
+                        CoordinatorId = coordinatorId,
+                        DateVerified = DateTime.Now,
+                        VerificationNotes = notes
+                    };
+                    _context.Approvals.Add(approval);
+                }
+                else
+                {
+                    approval.CoordinatorId = coordinatorId;
+                    approval.DateVerified = DateTime.Now;
+                    approval.VerificationNotes = notes;
+                }
             }
             else if (action == "reject")
             {
                 claim.Verified = false;
                 claim.Status = "Rejected";
+
+                // Create rejection record
+                var approval = new ApprovalModel
+                {
+                    ClaimId = claimId,
+                    CoordinatorId = coordinatorId,
+                    DateVerified = DateTime.Now,
+                    VerificationNotes = notes ?? "Rejected by coordinator"
+                };
+                _context.Approvals.Add(approval);
             }
 
-            if (!string.IsNullOrWhiteSpace(notes))
-                claim.Description += $"\n[Coordinator Notes: {notes}]";
-
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
             TempData["Success"] = $"Claim #{claimId} {(action == "verify" ? "verified" : "rejected")} successfully!";
             return RedirectToAction("Verify");
         }
 
-        //   Download encrypted file (decrypts before returning)
+        // DOWNLOAD ENCRYPTED DOCUMENT
         public IActionResult DownloadDocument(int id)
         {
             var document = _context.UploadDocuments.FirstOrDefault(d => d.Id == id);
             if (document == null)
                 return NotFound();
 
-            using var aes = Aes.Create();
-            aes.Key = EncryptionKey;
-            aes.IV = new byte[16];
+            try
+            {
+                using var aes = Aes.Create();
+                aes.Key = EncryptionKey;
+                aes.IV = new byte[16];
 
-            using var inputStream = new FileStream(document.FilePath, FileMode.Open, FileAccess.Read);
-            using var cryptoStream = new CryptoStream(inputStream, aes.CreateDecryptor(), CryptoStreamMode.Read);
-            using var memoryStream = new MemoryStream();
-            cryptoStream.CopyTo(memoryStream);
+                using var inputStream = new FileStream(document.FilePath, FileMode.Open, FileAccess.Read);
+                using var cryptoStream = new CryptoStream(inputStream, aes.CreateDecryptor(), CryptoStreamMode.Read);
+                using var memoryStream = new MemoryStream();
+                cryptoStream.CopyTo(memoryStream);
 
-            return File(memoryStream.ToArray(), document.ContentType, document.OriginalFilename);
+                return File(memoryStream.ToArray(), document.ContentType, document.OriginalFilename);
+            }
+            catch (Exception)
+            {
+                TempData["Error"] = "Error downloading file.";
+                return RedirectToAction("Verify");
+            }
         }
 
-        private DashboardViewModel BuildCoordinatorDashboard()
+        // BUILD DASHBOARD DATA
+        private async Task<DashboardViewModel> BuildCoordinatorDashboard()
         {
-            var claims = _context.Claims.ToList();
+            var claims = await _context.Claims.ToListAsync();
 
             return new DashboardViewModel
             {
@@ -111,8 +152,8 @@ namespace ST10448895_CMCS_PROG.Controllers
                 PendingClaims = claims.Count(c => !c.Verified),
                 VerifiedClaims = claims.Count(c => c.Verified),
                 ApprovedClaims = claims.Count(c => c.Approved),
-                TotalAmount = claims.Sum(c => c.TotalAmount),
-                PendingAmount = claims.Where(c => !c.Verified).Sum(c => c.TotalAmount),
+                TotalAmount = claims.Sum(c => c.HoursWorked * c.HourlyRate),
+                PendingAmount = claims.Where(c => !c.Verified).Sum(c => c.HoursWorked * c.HourlyRate),
                 RecentClaims = claims.OrderByDescending(c => c.SubmitDate).Take(5).ToList()
             };
         }
