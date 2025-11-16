@@ -40,7 +40,7 @@ namespace ST10448895_CMCS_PROG.Models
         [Required]
         public bool Approved { get; set; } = false;
 
-        // Navigation properties - DO NOT create FK columns
+        // Navigation properties 
         [ForeignKey("LecturerId")]
         public virtual LecturerModel? Lecturer { get; set; }
 

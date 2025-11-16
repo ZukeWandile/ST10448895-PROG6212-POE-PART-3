@@ -3,20 +3,26 @@
 @{
     ViewData["Title"] = "Submit Claim";
 
-    // Get lecturer's assigned modules with rates
+    // Get lecturer info and assigned modules
     var lecturerId = Context.Session.GetInt32("UserId") ?? 0;
+    var lecturerName = Context.Session.GetString("UserName") ?? "";
+
     var dbContext = Context.RequestServices.GetRequiredService<ST10448895_CMCS_PROG.Data.ApplicationDbContext>();
-    var assignments = dbContext.LecturerModules
-        .Where(lm => lm.LecturerId == lecturerId)
-        .Select(lm => new
-        {
-            lm.Id,
-            lm.ModuleId,
-            lm.HourlyRate,
-            ModuleCode = dbContext.Modules.Where(m => m.Id == lm.ModuleId).Select(m => m.ModuleCode).FirstOrDefault(),
-            ModuleName = dbContext.Modules.Where(m => m.Id == lm.ModuleId).Select(m => m.ModuleName).FirstOrDefault()
-        })
-        .ToList();
+
+    // Get lecturer details
+    var lecturer = dbContext.Lecturers.FirstOrDefault(l => l.Id == lecturerId);
+
+    // Get assigned modules with rates
+    var moduleAssignments = (from lm in dbContext.LecturerModules
+                             join m in dbContext.Modules on lm.ModuleId equals m.Id
+                             where lm.LecturerId == lecturerId
+                             select new
+                             {
+                                 ModuleId = m.Id,
+                                 ModuleCode = m.ModuleCode,
+                                 ModuleName = m.ModuleName,
+                                 HourlyRate = lm.HourlyRate
+                             }).ToList();
 }
 
 <div class="container mt-4">
@@ -27,84 +33,114 @@
                     <h4 class="mb-0">Submit New Claim</h4>
                 </div>
                 <div class="card-body">
-                    @if (!assignments.Any())
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger">@TempData["Error"]</div>
+                    }
+
+                    @if (!moduleAssignments.Any())
                     {
                         <div class="alert alert-warning">
                             <h5><i class="bi bi-exclamation-triangle"></i> No Modules Assigned</h5>
-                            <p>You don't have any modules assigned yet. Please contact HR to assign modules and set your hourly rates.</p>
-                            <a asp-action="Index" class="btn btn-secondary">Back to Claims</a>
+                            <p>You don't have any modules assigned yet. Please contact HR to:</p>
+                            <ul>
+                                <li>Assign modules to you</li>
+                                <li>Set your hourly rates</li>
+                            </ul>
+                            <a asp-action="Index" class="btn btn-secondary mt-2">Back to Claims</a>
                         </div>
                     }
                     else
                     {
+                        <!-- Lecturer Information Card -->
+                        <div class="alert alert-info">
+                            <h6 class="mb-2">Lecturer Information (Set by HR)</h6>
+                            <p class="mb-1"><strong>Name:</strong> @lecturerName</p>
+                            @if (lecturer != null && !string.IsNullOrEmpty(lecturer.Email))
+                            {
+                                <p class="mb-1"><strong>Email:</strong> @lecturer.Email</p>
+                            }
+                            @if (lecturer != null && !string.IsNullOrEmpty(lecturer.Department))
+                            {
+                                <p class="mb-0"><strong>Department:</strong> @lecturer.Department</p>
+                            }
+                        </div>
+
                         <form asp-action="Submit" method="post" enctype="multipart/form-data">
                             @Html.AntiForgeryToken()
 
-                            <!-- Module Selection (with HR-set rates) -->
+                            <!-- Module Selection -->
                             <div class="mb-3">
-                                <label class="form-label">Select Module</label>
-                                <select id="moduleSelect" name="moduleId" class="form-select" required>
+                                <label class="form-label">
+                                    <strong>Select Module</strong> <span class="text-danger">*</span>
+                                </label>
+                                <select name="moduleId" id="moduleSelect" class="form-select form-select-lg" required>
                                     <option value="">-- Choose the module you taught --</option>
-                                    @foreach (var assignment in assignments)
+                                    @foreach (var module in moduleAssignments)
                                     {
-                                        <option value="@assignment.ModuleId"
-                                                data-rate="@assignment.HourlyRate">
-                                            @assignment.ModuleCode - @assignment.ModuleName (Rate: @assignment.HourlyRate.ToString("C")/hr)
+                                        <option value="@module.ModuleId"
+                                                data-rate="@module.HourlyRate"
+                                                data-code="@module.ModuleCode"
+                                                data-name="@module.ModuleName">
+                                            @module.ModuleCode - @module.ModuleName
+                                            <span style="color: green;">(Rate: R@module.HourlyRate/hour)</span>
                                         </option>
                                     }
                                 </select>
-                                <small class="form-text text-muted">Your hourly rate is set by HR for each module</small>
+                                <small class="form-text text-muted">
+                                    <i class="bi bi-info-circle"></i> Your hourly rate is set by HR for each module
+                                </small>
+                            </div>
+
+                            <!-- Display Selected Module Info -->
+                            <div id="moduleInfo" class="alert alert-light d-none mb-3">
+                                <strong>Selected Module:</strong> <span id="selectedModuleName"></span><br>
+                                <strong>HR-Set Rate:</strong> <span id="selectedRate" class="text-success"></span> per hour
                             </div>
 
                             <!-- Hours Worked -->
                             <div class="mb-3">
-                                <label asp-for="Claim.HoursWorked" class="form-label">Hours Worked</label>
-                                <input asp-for="Claim.HoursWorked"
+                                <label class="form-label">
+                                    <strong>Hours Worked</strong> <span class="text-danger">*</span>
+                                </label>
+                                <input name="Claim.HoursWorked"
                                        id="hoursInput"
-                                       class="form-control"
+                                       class="form-control form-control-lg"
                                        type="number"
                                        min="1"
                                        max="1000"
+                                       placeholder="Enter hours worked"
                                        required>
-                                <span asp-validation-for="Claim.HoursWorked" class="text-danger"></span>
                             </div>
 
-                            <!-- Hourly Rate (Read-Only, set by module selection) -->
-                            <div class="mb-3">
-                                <label asp-for="Claim.HourlyRate" class="form-label">Hourly Rate (Set by HR)</label>
-                                <input asp-for="Claim.HourlyRate"
-                                       id="rateInput"
-                                       class="form-control"
-                                       type="number"
-                                       step="0.01"
-                                       readonly
-                                       style="background-color: #f8f9fa;">
-                                <small class="form-text text-muted">This rate is assigned by HR and cannot be changed</small>
-                            </div>
+                            <!-- Hidden Hourly Rate (Set by HR) -->
+                            <input type="hidden" name="Claim.HourlyRate" id="rateInput" />
 
-                            <!-- Total Amount (Auto-calculated) -->
+                            <!-- Total Amount Display -->
                             <div class="mb-3">
-                                <label class="form-label">Total Claim Amount</label>
+                                <label class="form-label"><strong>Total Claim Amount</strong></label>
                                 <input id="totalAmount"
-                                       class="form-control form-control-lg"
+                                       class="form-control form-control-lg text-center"
                                        readonly
-                                       style="font-weight: bold; font-size: 1.5em; color: #28a745;">
+                                       placeholder="Total will calculate automatically"
+                                       style="font-weight: bold; font-size: 1.8em; color: #28a745; background-color: #f8f9fa; border: 2px solid #28a745;">
                             </div>
 
                             <!-- Description -->
                             <div class="mb-3">
-                                <label asp-for="Claim.Description" class="form-label">Description</label>
-                                <textarea asp-for="Claim.Description"
-                                          class="form-control"
-                                          rows="4"
-                                          placeholder="Describe the work performed (e.g., lectures, tutorials, marking)"
-                                          required></textarea>
-                                <span asp-validation-for="Claim.Description" class="text-danger"></span>
+                                <label class="form-label">
+                                    <strong>Description</strong> <span class="text-danger">*</span>
+                                </label>
+                                <textarea name="Claim.Description"
+                                      class="form-control"
+                                      rows="4"
+                                      placeholder="Describe the work performed (e.g., lectures delivered, tutorials conducted, assessments marked)"
+                                      required></textarea>
                             </div>
 
                             <!-- Supporting Documents -->
                             <div class="mb-3">
-                                <label class="form-label">Supporting Documents</label>
+                                <label class="form-label"><strong>Supporting Documents</strong> (Optional)</label>
                                 <input type="file"
                                        name="Documents"
                                        class="form-control"
@@ -112,40 +148,39 @@
                                        accept=".pdf,.docx,.xlsx"
                                        id="fileInput">
                                 <small class="form-text text-muted">
-                                    Upload timesheets, schedules, or other supporting documents (PDF, Word, Excel only - Max 5MB each)
+                                    Upload timesheets, schedules, or proof of work (PDF, Word, Excel only - Max 5MB each)
                                 </small>
                                 <div id="fileList" class="mt-2"></div>
                             </div>
 
                             <!-- Submit Buttons -->
-                            <div class="d-flex justify-content-between">
-                                <a asp-action="Index" class="btn btn-secondary">
+                            <div class="d-flex justify-content-between mt-4">
+                                <a asp-action="Index" class="btn btn-secondary btn-lg">
                                     <i class="bi bi-arrow-left"></i> Cancel
                                 </a>
-                                <button type="submit" class="btn btn-success btn-lg">
+                                <button type="submit" class="btn btn-success btn-lg" id="submitBtn" disabled>
                                     <i class="bi bi-check-circle"></i> Submit Claim
                                 </button>
                             </div>
                         </form>
+
+                        <!-- Information Box -->
+                        <div class="card mt-3 border-info">
+                            <div class="card-body">
+                                <h6 class="card-title text-info">
+                                    <i class="bi bi-info-circle"></i> Important Information
+                                </h6>
+                                <ul class="small mb-0">
+                                    <li>Your hourly rates are set by HR and cannot be changed</li>
+                                    <li>Select the correct module to load the appropriate rate</li>
+                                    <li>Provide accurate hours worked</li>
+                                    <li>Upload supporting documents to speed up approval</li>
+                                </ul>
+                            </div>
+                        </div>
                     }
                 </div>
             </div>
-
-            <!-- Info Card -->
-            @if (assignments.Any())
-            {
-                <div class="card mt-3">
-                    <div class="card-body">
-                        <h6 class="card-title">Important Information</h6>
-                        <ul class="small mb-0">
-                            <li>Select the module you taught to automatically load the correct hourly rate</li>
-                            <li>Your hourly rates are set by HR and cannot be modified</li>
-                            <li>Provide accurate hours worked - this will be verified</li>
-                            <li>Upload supporting documents to speed up approval</li>
-                        </ul>
-                    </div>
-                </div>
-            }
         </div>
     </div>
 </div>
@@ -157,25 +192,44 @@
         const hoursInput = document.getElementById('hoursInput');
         const rateInput = document.getElementById('rateInput');
         const totalInput = document.getElementById('totalAmount');
+        const submitBtn = document.getElementById('submitBtn');
+        const moduleInfo = document.getElementById('moduleInfo');
+        const selectedModuleName = document.getElementById('selectedModuleName');
+        const selectedRate = document.getElementById('selectedRate');
         const fileInput = document.getElementById('fileInput');
         const fileList = document.getElementById('fileList');
 
         // Update rate when module is selected
-        moduleSelect.addEventListener('change', function() {
-            const selectedOption = this.options[this.selectedIndex];
-            const rate = selectedOption.getAttribute('data-rate');
+        if (moduleSelect) {
+            moduleSelect.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                const rate = selectedOption.getAttribute('data-rate');
+                const moduleCode = selectedOption.getAttribute('data-code');
+                const moduleName = selectedOption.getAttribute('data-name');
 
-            if (rate) {
-                rateInput.value = rate;
-                calculateTotal();
-            } else {
-                rateInput.value = '';
-                totalInput.value = '';
-            }
-        });
+                if (rate && rate !== '') {
+                    rateInput.value = rate;
+                    selectedModuleName.textContent = moduleCode + ' - ' + moduleName;
+                    selectedRate.textContent = 'R' + parseFloat(rate).toFixed(2);
+                    moduleInfo.classList.remove('d-none');
+                    calculateTotal();
+                    checkFormValid();
+                } else {
+                    rateInput.value = '';
+                    moduleInfo.classList.add('d-none');
+                    totalInput.value = '';
+                    submitBtn.disabled = true;
+                }
+            });
+        }
 
         // Calculate total when hours change
-        hoursInput.addEventListener('input', calculateTotal);
+        if (hoursInput) {
+            hoursInput.addEventListener('input', function() {
+                calculateTotal();
+                checkFormValid();
+            });
+        }
 
         function calculateTotal() {
             const hours = parseFloat(hoursInput.value) || 0;
@@ -183,41 +237,55 @@
             const total = hours * rate;
 
             if (total > 0) {
-                totalInput.value = `R ${total.toFixed(2)}`;
+                totalInput.value = 'R ' + total.toFixed(2);
             } else {
                 totalInput.value = '';
             }
         }
 
+        function checkFormValid() {
+            const hasModule = moduleSelect.value !== '';
+            const hasHours = hoursInput.value > 0;
+            submitBtn.disabled = !(hasModule && hasHours);
+        }
+
         // File upload preview
-        fileInput.addEventListener('change', function() {
-            fileList.innerHTML = '';
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                fileList.innerHTML = '';
 
-            if (this.files.length > 0) {
-                const ul = document.createElement('ul');
-                ul.className = 'list-group';
+                if (this.files.length > 0) {
+                    const ul = document.createElement('ul');
+                    ul.className = 'list-group mt-2';
 
-                Array.from(this.files).forEach(file => {
-                    const li = document.createElement('li');
-                    li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    Array.from(this.files).forEach(file => {
+                        const li = document.createElement('li');
+                        li.className = 'list-group-item d-flex justify-content-between align-items-center';
 
-                    const fileSize = (file.size / 1024 / 1024).toFixed(2);
-                    const sizeClass = fileSize > 5 ? 'text-danger' : 'text-success';
+                        const fileSize = (file.size / 1024 / 1024).toFixed(2);
+                        const sizeClass = fileSize > 5 ? 'bg-danger' : 'bg-success';
 
-                    li.innerHTML = `
-                        <span><i class="bi bi-file-earmark"></i> ${file.name}</span>
-                        <span class="badge ${sizeClass}">${fileSize} MB</span>
-                    `;
+                        li.innerHTML = `
+                            <span><i class="bi bi-file-earmark"></i> ${file.name}</span>
+                            <span class="badge ${sizeClass}">${fileSize} MB</span>
+                        `;
 
-                    ul.appendChild(li);
-                });
+                        ul.appendChild(li);
+                    });
 
-                fileList.appendChild(ul);
-            }
-        });
+                    fileList.appendChild(ul);
+                }
+            });
+        }
     });
 </script>
 
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-}
+<style>
+    .form-select-lg {
+        font-size: 1.1em;
+    }
+
+    #totalAmount {
+        text-align: center;
+    }
+</style>

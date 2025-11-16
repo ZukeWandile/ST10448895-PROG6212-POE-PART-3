@@ -58,85 +58,89 @@ namespace ST10448895_CMCS_PROG.Controllers
             if (lecturerId == null)
                 return RedirectToAction("Index", "Login");
 
-            if (!ModelState.IsValid)
-                return View(model);
-
-            // Get the hourly rate from the lecturer's module assignment
-            var assignment = await _context.LecturerModules
-                .FirstOrDefaultAsync(lm => lm.LecturerId == lecturerId && lm.ModuleId == moduleId);
-
-            if (assignment == null)
+            try
             {
-                TempData["Error"] = "You are not assigned to this module. Please contact HR.";
-                return View(model);
-            }
+                // Get the module assignment to verify and get the HR-set rate
+                var assignment = await _context.LecturerModules
+                    .FirstOrDefaultAsync(lm => lm.LecturerId == lecturerId && lm.ModuleId == moduleId);
 
-            var claim = new ClaimModel
-            {
-                LecturerId = lecturerId.Value,
-                Description = model.Claim.Description,
-                HoursWorked = model.Claim.HoursWorked,
-                HourlyRate = assignment.HourlyRate, // Use HR-assigned rate
-                SubmitDate = DateTime.Now,
-                Status = "Pending",
-                Verified = false,
-                Approved = false
-            };
-
-            _context.Claims.Add(claim);
-            await _context.SaveChangesAsync();
-
-            // DOCUMENT UPLOAD WITH ENCRYPTION
-            if (Documents != null && Documents.Any())
-            {
-                string uploadDir = Path.Combine(_environment.WebRootPath, "uploads");
-                Directory.CreateDirectory(uploadDir);
-
-                foreach (var file in Documents)
+                if (assignment == null)
                 {
-                    string ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-
-                    if (!AllowedExtensions.Contains(ext))
-                    {
-                        TempData["Error"] = $"Invalid file type: {file.FileName}";
-                        continue;
-                    }
-
-                    if (file.Length > MaxFileSize)
-                    {
-                        TempData["Error"] = $"File too large: {file.FileName}";
-                        continue;
-                    }
-
-                    string encryptedFilePath = Path.Combine(uploadDir, Guid.NewGuid() + ext);
-                    using (var fileStream = new FileStream(encryptedFilePath, FileMode.Create))
-                    {
-                        using var aes = Aes.Create();
-                        aes.Key = EncryptionKey;
-                        aes.IV = new byte[16];
-                        using var cryptoStream = new CryptoStream(fileStream, aes.CreateEncryptor(), CryptoStreamMode.Write);
-                        await file.CopyToAsync(cryptoStream);
-                    }
-
-                    var doc = new UploadDocumentModel
-                    {
-                        ClaimId = claim.Id,
-                        Filename = Path.GetFileName(encryptedFilePath),
-                        OriginalFilename = file.FileName,
-                        FileSize = file.Length,
-                        ContentType = file.ContentType,
-                        FilePath = encryptedFilePath,
-                        UploadedAt = DateTime.Now
-                    };
-
-                    _context.UploadDocuments.Add(doc);
+                    TempData["Error"] = "You are not assigned to this module. Please contact HR.";
+                    return RedirectToAction("Submit");
                 }
 
-                await _context.SaveChangesAsync();
-            }
+                // Create claim with HR-set hourly rate
+                var claim = new ClaimModel
+                {
+                    LecturerId = lecturerId.Value,
+                    Description = model.Claim.Description ?? "",
+                    HoursWorked = model.Claim.HoursWorked,
+                    HourlyRate = assignment.HourlyRate, // Use HR-assigned rate from module assignment
+                    SubmitDate = DateTime.Now,
+                    Status = "Pending",
+                    Verified = false,
+                    Approved = false
+                };
 
-            TempData["Success"] = "Claim submitted successfully!";
-            return RedirectToAction(nameof(Index));
+                _context.Claims.Add(claim);
+                await _context.SaveChangesAsync();
+
+                // DOCUMENT UPLOAD WITH ENCRYPTION
+                if (Documents != null && Documents.Any())
+                {
+                    string uploadDir = Path.Combine(_environment.WebRootPath, "uploads");
+                    Directory.CreateDirectory(uploadDir);
+
+                    foreach (var file in Documents)
+                    {
+                        string ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+
+                        if (!AllowedExtensions.Contains(ext))
+                        {
+                            continue;
+                        }
+
+                        if (file.Length > MaxFileSize)
+                        {
+                            continue;
+                        }
+
+                        string encryptedFilePath = Path.Combine(uploadDir, Guid.NewGuid() + ext);
+                        using (var fileStream = new FileStream(encryptedFilePath, FileMode.Create))
+                        {
+                            using var aes = Aes.Create();
+                            aes.Key = EncryptionKey;
+                            aes.IV = new byte[16];
+                            using var cryptoStream = new CryptoStream(fileStream, aes.CreateEncryptor(), CryptoStreamMode.Write);
+                            await file.CopyToAsync(cryptoStream);
+                        }
+
+                        var doc = new UploadDocumentModel
+                        {
+                            ClaimId = claim.Id,
+                            Filename = Path.GetFileName(encryptedFilePath),
+                            OriginalFilename = file.FileName,
+                            FileSize = file.Length,
+                            ContentType = file.ContentType,
+                            FilePath = encryptedFilePath,
+                            UploadedAt = DateTime.Now
+                        };
+
+                        _context.UploadDocuments.Add(doc);
+                    }
+
+                    await _context.SaveChangesAsync();
+                }
+
+                TempData["Success"] = "Claim submitted successfully!";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error submitting claim: {ex.Message}";
+                return View(model);
+            }
         }
 
         // VIEW DOCUMENTS PER CLAIM
