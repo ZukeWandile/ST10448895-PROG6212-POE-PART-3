@@ -29,7 +29,7 @@ namespace ST10448895_CMCS_PROG.Controllers
             return View(dashboard);
         }
 
-        // VERIFY CLAIMS - FIXED: Removed .Include()
+        // VERIFY CLAIMS - FIXED: Load documents separately and create a dictionary
         public async Task<IActionResult> Verify()
         {
             // Get pending claims without navigation properties
@@ -38,16 +38,18 @@ namespace ST10448895_CMCS_PROG.Controllers
                 .OrderByDescending(c => c.SubmitDate)
                 .ToListAsync();
 
-            // Manually load documents for each claim
-            foreach (var claim in pendingClaims)
-            {
-                var documents = await _context.UploadDocuments
-                    .Where(d => d.ClaimId == claim.Id)
-                    .ToListAsync();
+            // Get all documents for these claims in one query
+            var claimIds = pendingClaims.Select(c => c.Id).ToList();
+            var allDocuments = await _context.UploadDocuments
+                .Where(d => claimIds.Contains(d.ClaimId))
+                .ToListAsync();
 
-                // Store in ViewBag for each claim
-                ViewData[$"Documents_{claim.Id}"] = documents;
-            }
+            // Create a dictionary for easy lookup in the view
+            var documentsByClaim = allDocuments
+                .GroupBy(d => d.ClaimId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            ViewBag.DocumentsByClaim = documentsByClaim;
 
             return View(pendingClaims);
         }
@@ -114,12 +116,22 @@ namespace ST10448895_CMCS_PROG.Controllers
             return RedirectToAction("Verify");
         }
 
-        // DOWNLOAD ENCRYPTED DOCUMENT
-        public IActionResult DownloadDocument(int id)
+        // DOWNLOAD ENCRYPTED DOCUMENT 
+        public async Task<IActionResult> DownloadDocument(int id)
         {
-            var document = _context.UploadDocuments.FirstOrDefault(d => d.Id == id);
+            var document = await _context.UploadDocuments.FirstOrDefaultAsync(d => d.Id == id);
             if (document == null)
-                return NotFound();
+            {
+                TempData["Error"] = "Document not found.";
+                return RedirectToAction("Verify");
+            }
+
+            // Check if file exists
+            if (!System.IO.File.Exists(document.FilePath))
+            {
+                TempData["Error"] = "File not found on server.";
+                return RedirectToAction("Verify");
+            }
 
             try
             {
@@ -132,9 +144,15 @@ namespace ST10448895_CMCS_PROG.Controllers
                 using var memoryStream = new MemoryStream();
                 cryptoStream.CopyTo(memoryStream);
 
-                return File(memoryStream.ToArray(), document.ContentType, document.OriginalFilename);
+                var decryptedData = memoryStream.ToArray();
+                return File(decryptedData, document.ContentType, document.OriginalFilename);
             }
-            catch (Exception)
+            catch (CryptographicException ex)
+            {
+                TempData["Error"] = "Error decrypting file. The file may be corrupted.";
+                return RedirectToAction("Verify");
+            }
+            catch (Exception ex)
             {
                 TempData["Error"] = "Error downloading file.";
                 return RedirectToAction("Verify");
