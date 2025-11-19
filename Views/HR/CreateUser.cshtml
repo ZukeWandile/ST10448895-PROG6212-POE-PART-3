@@ -1,0 +1,179 @@
+﻿@model ST10448895_CMCS_PROG.Models.ViewModels.CreateUserViewModel
+@{
+    ViewData["Title"] = "Create New User";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Create New User Account</h2>
+        <a asp-action="ManageUsers" class="btn btn-secondary">
+            Back to Users
+        </a>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">User Account Details</h5>
+        </div>
+        <div class="card-body">
+            <form asp-action="CreateUser" method="post" id="createUserForm">
+                @Html.AntiForgeryToken()
+
+                <!-- Login Credentials Section -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="border-bottom pb-2 mb-3">
+                            Login Credentials
+                        </h5>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Username" class="form-label">
+                            Username <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="Username" class="form-control" placeholder="e.g., Hannah.M" />
+                        <small class="text-muted">This will be used to log in</small>
+                        <span asp-validation-for="Username" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Role" class="form-label">
+                            Role <span class="text-danger">*</span>
+                        </label>
+                        <select asp-for="Role" class="form-select" id="roleSelect">
+                            <option value="">-- Select Role --</option>
+                            <option value="Lecturer">Lecturer</option>
+                            <option value="Coordinator">Coordinator</option>
+                            <option value="Manager">Manager</option>
+                            <option value="HR">HR Staff</option>
+                        </select>
+                        <span asp-validation-for="Role" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Password" class="form-label">
+                            Password <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="Password" class="form-control" type="password" placeholder="Min. 6 characters" />
+                        <small class="text-muted">Must be at least 6 characters</small>
+                        <span asp-validation-for="Password" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="ConfirmPassword" class="form-label">
+                            Confirm Password <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="ConfirmPassword" class="form-control" type="password" placeholder="Re-enter password" />
+                        <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- Personal Information Section -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="border-bottom pb-2 mb-3">
+                            Personal Information
+                        </h5>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="FullName" class="form-label">
+                            Full Name <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="FullName" class="form-control" placeholder="e.g., Hannah Mole" />
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3" id="emailField" style="display:none;">
+                        <label asp-for="Email" class="form-label">
+                            Email Address <span class="text-danger" id="emailRequired">*</span>
+                        </label>
+                        <input asp-for="Email" class="form-control" type="email" placeholder="e.g., HannahM@iiemsa.ed.za" id="emailInput" />
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- Lecturer-Specific Fields -->
+                <div class="row" id="departmentField" style="display:none;">
+                    <div class="col-12">
+                        <h5 class="border-bottom pb-2 mb-3">
+                            Lecturer Information
+                        </h5>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Department" class="form-label">Department</label>
+                        <input asp-for="Department" class="form-control" placeholder="e.g., Computer Science" />
+                        <span asp-validation-for="Department" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                    <a asp-action="ManageUsers" class="btn btn-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        Create User Account
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Credentials Display Card (shown after creation) -->
+    @if (TempData["NewUsername"] != null)
+    {
+        <div class="card mt-4 border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Account Created Successfully!</h5>
+            </div>
+            <div class="card-body">
+                <h6>Share these credentials with the user:</h6>
+                <table class="table table-bordered">
+                    <tr>
+                        <th width="150">Username:</th>
+                        <td><strong>@TempData["NewUsername"]</strong></td>
+                    </tr>
+                    <tr>
+                        <th>Password:</th>
+                        <td><strong>@TempData["NewPassword"]</strong></td>
+                    </tr>
+                    <tr>
+                        <th>Role:</th>
+                        <td><strong>@TempData["NewRole"]</strong></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        document.getElementById('roleSelect').addEventListener('change', function() {
+            var role = this.value;
+            var emailField = document.getElementById('emailField');
+            var emailInput = document.getElementById('emailInput');
+            var emailRequired = document.getElementById('emailRequired');
+            var departmentField = document.getElementById('departmentField');
+
+            // Show email ONLY for Lecturer and HR
+            if (role === 'Lecturer' || role === 'HR') {
+                emailField.style.display = 'block';
+                emailInput.setAttribute('required', 'required');
+                emailRequired.style.display = 'inline';
+            } else {
+                emailField.style.display = 'none';
+                emailInput.removeAttribute('required');
+                emailInput.value = '';
+            }
+
+            // Show department only for Lecturer
+            if (role === 'Lecturer') {
+                departmentField.style.display = 'block';
+            } else {
+                departmentField.style.display = 'none';
+            }
+        });
+    </script>
+}

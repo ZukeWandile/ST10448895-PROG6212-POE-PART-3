@@ -1,0 +1,118 @@
+﻿@model IEnumerable<ST10448895_CMCS_PROG.Models.ViewModels.ClaimSummary>
+@{
+    ViewData["Title"] = "All Claims";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2> All Claims</h2>
+        <div>
+            <a asp-action="DownloadAllClaimsPDF" class="btn btn-danger">
+                 Download PDF
+            </a>
+            <a asp-action="Reports" class="btn btn-secondary">
+                Back to Reports
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter/Search Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by lecturer name...">
+                </div>
+                <div class="col-md-3">
+                    <select id="statusFilter" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="Submitted">Submitted</option>
+                        <option value="Verified">Verified</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
+                </div>
+                <div class="col-md-5 text-end">
+                    <strong>Total Claims: @Model.Count()</strong> |
+                    <strong>Total Amount: @Model.Sum(c => c.TotalAmount).ToString("C")</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Claims Table -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="claimsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Claim ID</th>
+                            <th>Lecturer</th>
+                            <th>Hours Worked</th>
+                            <th>Hourly Rate</th>
+                            <th>Total Amount</th>
+                            <th>Status</th>
+                            <th>Submit Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var claim in Model)
+                        {
+                            <tr>
+                                <td><strong>#@claim.ClaimId</strong></td>
+                                <td>@claim.LecturerName</td>
+                                <td>@claim.HoursWorked hrs</td>
+                                <td>@claim.HourlyRate.ToString("C")</td>
+                                <td><strong>@claim.TotalAmount.ToString("C")</strong></td>
+                                <td>
+                                    @{
+                                        string badgeClass = claim.Status switch
+                                        {
+                                            "Approved" => "bg-success",
+                                            "Verified" => "bg-info",
+                                            "Rejected" => "bg-danger",
+                                            _ => "bg-warning text-dark"
+                                        };
+                                    }
+                                    <span class="badge @badgeClass">@claim.Status</span>
+                                </td>
+                                <td>@claim.SubmitDate.ToString("dd MMM yyyy HH:mm")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Simple search filter
+        document.getElementById('searchInput').addEventListener('keyup', filterTable);
+        document.getElementById('statusFilter').addEventListener('change', filterTable);
+
+        function filterTable() {
+            const searchValue = document.getElementById('searchInput').value.toLowerCase();
+            const statusValue = document.getElementById('statusFilter').value.toLowerCase();
+            const table = document.getElementById('claimsTable');
+            const rows = table.getElementsByTagName('tr');
+
+            for (let i = 1; i < rows.length; i++) {
+                const lecturerCell = rows[i].getElementsByTagName('td')[1];
+                const statusCell = rows[i].getElementsByTagName('td')[5];
+
+                if (lecturerCell && statusCell) {
+                    const lecturerText = lecturerCell.textContent.toLowerCase();
+                    const statusText = statusCell.textContent.toLowerCase();
+
+                    const matchesSearch = lecturerText.includes(searchValue);
+                    const matchesStatus = statusValue === '' || statusText.includes(statusValue);
+
+                    rows[i].style.display = (matchesSearch && matchesStatus) ? '' : 'none';
+                }
+            }
+        }
+    </script>
+}

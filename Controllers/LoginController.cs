@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿// Controllers/LoginController.cs
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ST10448895_CMCS_PROG.Data;
-using ST10448895_CMCS_PROG.Models;
+using ST10448895_CMCS_PROG.Models.ViewModels;
+using ST10448895_CMCS_PROG.Helpers;
 
 namespace ST10448895_CMCS_PROG.Controllers
 {
@@ -14,6 +16,7 @@ namespace ST10448895_CMCS_PROG.Controllers
             _context = context;
         }
 
+        // GET: Login
         public IActionResult Index()
         {
             // Clear any existing session
@@ -21,95 +24,105 @@ namespace ST10448895_CMCS_PROG.Controllers
             return View();
         }
 
+        // POST: Login
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Index(Login model)
+        public async Task<IActionResult> Index(LoginViewModel model)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
+                return View(model);
+
+            // Find user by username
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Username == model.Username && u.IsActive);
+
+            if (user == null)
             {
-                HttpContext.Session.SetString("UserRole", model.Role);
-                HttpContext.Session.SetString("UserName", model.Name);
-
-                int userId = 0;
-
-                if (model.Role == "Lecturer")
-                {
-                    var lecturer = await _context.Lecturers
-                        .FirstOrDefaultAsync(l => l.Name == model.Name);
-
-                    if (lecturer == null)
-                    {
-                        TempData["Error"] = "Lecturer not found. Please contact HR.";
-                        return View(model);
-                    }
-
-                    userId = lecturer.Id;
-                }
-                else if (model.Role == "Coordinator")
-                {
-                    var coordinator = await _context.Coordinators
-                        .FirstOrDefaultAsync(c => c.Name == model.Name);
-
-                    if (coordinator == null)
-                    {
-                        coordinator = new CoordinatorModel { Name = model.Name };
-                        _context.Coordinators.Add(coordinator);
-                        await _context.SaveChangesAsync();
-                    }
-
-                    userId = coordinator.Id;
-                }
-                else if (model.Role == "Manager")
-                {
-                    var manager = await _context.Managers
-                        .FirstOrDefaultAsync(m => m.Name == model.Name);
-
-                    if (manager == null)
-                    {
-                        manager = new ManagerModel { Name = model.Name };
-                        _context.Managers.Add(manager);
-                        await _context.SaveChangesAsync();
-                    }
-
-                    userId = manager.Id;
-                }
-                else if (model.Role == "HR")
-                {
-                    var hr = await _context.HRStaff
-                        .FirstOrDefaultAsync(h => h.Name == model.Name);
-
-                    if (hr == null)
-                    {
-                        hr = new HR
-                        {
-                            Name = model.Name,
-                            Email = $"{model.Name.Replace(" ", "").ToLower()}@iieMSA.edu.za"
-                        };
-                        _context.HRStaff.Add(hr);
-                        await _context.SaveChangesAsync();
-                    }
-
-                    userId = hr.Id;
-                }
-
-                HttpContext.Session.SetInt32("UserId", userId);
-
-                return model.Role switch
-                {
-                    "Lecturer" => RedirectToAction("Index", "Lecturer"),
-                    "Coordinator" => RedirectToAction("Index", "Coordinator"),
-                    "Manager" => RedirectToAction("Index", "Manager"),
-                    "HR" => RedirectToAction("Index", "HR"),
-                    _ => RedirectToAction("Index", "Home")
-                };
+                TempData["Error"] = "Invalid username or password.";
+                return View(model);
             }
 
-            return View(model);
+            // Verify password
+            if (!PasswordHasher.VerifyPassword(user.PasswordHash, model.Password))
+            {
+                TempData["Error"] = "Invalid username or password.";
+                return View(model);
+            }
+
+            // Update last login
+            user.LastLogin = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            // Get role-specific ID and name
+            int roleId = 0;
+            string userName = string.Empty;
+
+            switch (user.Role)
+            {
+                case "Lecturer":
+                    var lecturer = await _context.Lecturers
+                        .FirstOrDefaultAsync(l => l.UserId == user.UserId);
+                    if (lecturer != null)
+                    {
+                        roleId = lecturer.Id;
+                        userName = lecturer.Name;
+                    }
+                    break;
+
+                case "Coordinator":
+                    var coordinator = await _context.Coordinators
+                        .FirstOrDefaultAsync(c => c.UserId == user.UserId);
+                    if (coordinator != null)
+                    {
+                        roleId = coordinator.Id;
+                        userName = coordinator.Name;
+                    }
+                    break;
+
+                case "Manager":
+                    var manager = await _context.Managers
+                        .FirstOrDefaultAsync(m => m.UserId == user.UserId);
+                    if (manager != null)
+                    {
+                        roleId = manager.Id;
+                        userName = manager.Name;
+                    }
+                    break;
+
+                case "HR":
+                    var hr = await _context.HRStaff
+                        .FirstOrDefaultAsync(h => h.UserId == user.UserId);
+                    if (hr != null)
+                    {
+                        roleId = hr.Id;
+                        userName = hr.Name;
+                    }
+                    break;
+            }
+
+            // Store in session
+            HttpContext.Session.SetInt32("UserId", roleId);
+            HttpContext.Session.SetInt32("AccountUserId", user.UserId);
+            HttpContext.Session.SetString("UserRole", user.Role);
+            HttpContext.Session.SetString("UserName", userName);
+            HttpContext.Session.SetString("Username", user.Username);
+
+            // Redirect based on role
+            return user.Role switch
+            {
+                "Lecturer" => RedirectToAction("Index", "Lecturer"),
+                "Coordinator" => RedirectToAction("Index", "Coordinator"),
+                "Manager" => RedirectToAction("Index", "Manager"),
+                "HR" => RedirectToAction("Index", "HR"),
+                _ => RedirectToAction("Index", "Home")
+            };
         }
 
+        // Logout
         public IActionResult Logout()
         {
             HttpContext.Session.Clear();
+            TempData["Success"] = "You have been logged out successfully.";
             return RedirectToAction("Index");
         }
     }

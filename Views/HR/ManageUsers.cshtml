@@ -1,0 +1,104 @@
+﻿@model IEnumerable<ST10448895_CMCS_PROG.Models.User>
+@{
+    ViewData["Title"] = "Manage Users";
+    var userDetails = ViewBag.UserDetails as List<dynamic>;
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Manage User Accounts</h2>
+        <div>
+            <a asp-action="CreateUser" class="btn btn-success">
+                Create New User
+            </a>
+            <a asp-action="Index" class="btn btn-secondary">
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">All Active Users</h5>
+        </div>
+        <div class="card-body">
+            @if (!userDetails.Any())
+            {
+                <div class="alert alert-info text-center">
+                    <h5>No users found</h5>
+                    <p>Click "Create New User" to add your first user account.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Username</th>
+                                <th>Full Name</th>
+                                <th>Role</th>
+                                <th>Email</th>
+                                <th>Created</th>
+                                <th>Last Login</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var detail in userDetails)
+                            {
+                                <tr>
+                                    <td><strong>@detail.Username</strong></td>
+                                    <td>@detail.FullName</td>
+                                    <td>
+                                        @{
+                                            string badgeClass = detail.Role switch
+                                            {
+                                                "HR" => "bg-danger",
+                                                "Manager" => "bg-success",
+                                                "Coordinator" => "bg-warning text-dark",
+                                                "Lecturer" => "bg-info",
+                                                _ => "bg-secondary"
+                                            };
+                                        }
+                                        <span class="badge @badgeClass">@detail.Role</span>
+                                    </td>
+                                    <td>@detail.Email</td>
+                                    <td>@DateTime.Parse(detail.CreatedAt.ToString()).ToString("dd MMM yyyy")</td>
+                                    <td>
+                                        @if (detail.LastLogin != null)
+                                        {
+                                            @DateTime.Parse(detail.LastLogin.ToString()).ToString("dd MMM yyyy HH:mm")
+                                        }
+                                        else
+                                        {
+                                            <em class="text-muted">Never logged in</em>
+                                        }
+                                    </td>
+                                    <td>
+                                        <form asp-action="DeactivateUser" method="post" style="display:inline;"
+                                              onsubmit="return confirm('Are you sure you want to deactivate @detail.Username?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="userId" value="@detail.UserId" />
+                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                Deactivate
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

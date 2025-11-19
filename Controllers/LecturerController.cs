@@ -24,7 +24,7 @@ namespace ST10448895_CMCS_PROG.Controllers
             _environment = environment;
         }
 
-        // LECTURER DASHBOARD - FIXED: Removed .Include() navigation
+        // LECTURER DASHBOARD 
         public async Task<IActionResult> Index()
         {
             var lecturerId = HttpContext.Session.GetInt32("UserId");
@@ -173,7 +173,7 @@ namespace ST10448895_CMCS_PROG.Controllers
             return File(memoryStream.ToArray(), document.ContentType, document.OriginalFilename);
         }
 
-        // TRACK CLAIM STATUS - FIXED: Removed .Include() navigation
+        // TRACK CLAIM STATUS 
         public async Task<IActionResult> Track(int id)
         {
             var claim = await _context.Claims

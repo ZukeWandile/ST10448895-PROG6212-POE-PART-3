@@ -1,4 +1,4 @@
-﻿// Controllers/CoordinatorController.cs - FIXED
+﻿
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ST10448895_CMCS_PROG.Attributes;
@@ -29,7 +29,7 @@ namespace ST10448895_CMCS_PROG.Controllers
             return View(dashboard);
         }
 
-        // VERIFY CLAIMS - FIXED: Load documents separately and create a dictionary
+        // VERIFY CLAIMS 
         public async Task<IActionResult> Verify()
         {
             // Get pending claims (not verified AND not rejected)
@@ -116,7 +116,7 @@ namespace ST10448895_CMCS_PROG.Controllers
             return RedirectToAction("Verify");
         }
 
-        // DOWNLOAD ENCRYPTED DOCUMENT - FIXED
+        // DOWNLOAD ENCRYPTED DOCUMENT 
         public async Task<IActionResult> DownloadDocument(int id)
         {
             var document = await _context.UploadDocuments.FirstOrDefaultAsync(d => d.Id == id);

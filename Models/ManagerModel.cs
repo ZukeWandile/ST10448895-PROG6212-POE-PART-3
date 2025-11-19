@@ -7,6 +7,7 @@ namespace ST10448895_CMCS_PROG.Models
     public class ManagerModel
     {
         public int Id { get; set; }
+        public int UserId { get; set; }
 
         [Required]
         public string Name { get; set; } = string.Empty;

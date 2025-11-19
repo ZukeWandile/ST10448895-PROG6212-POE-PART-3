@@ -21,20 +21,21 @@
                             <p><strong>Total:</strong> @Model.TotalAmount.ToString("C")</p>
                             <p><strong>Submitted:</strong> @Model.SubmitDate.ToString("dd MMMM yyyy")</p>
                         </div>
+
                         <div class="col-md-6">
                             <h6>Status Progress</h6>
                             <div class="progress-status">
                                 <div class="status-item @(Model.Status == "Submitted" || Model.Verified || Model.Approved ? "completed" : "")">
-                                    <span>✓</span> Submitted
+                                    Submitted
                                 </div>
                                 <div class="status-item @(Model.Verified || Model.Approved ? "completed" : "")">
-                                    <span>@(Model.Verified ? "✓" : "○")</span> Coordinator Review
+                                    Coordinator Review
                                 </div>
                                 <div class="status-item @(Model.Approved ? "completed" : "")">
-                                    <span>@(Model.Approved ? "✓" : "○")</span> Manager Approval
+                                    Manager Approval
                                 </div>
                                 <div class="status-item @(Model.Status == "Approved" ? "completed" : "")">
-                                    <span>@(Model.Status == "Approved" ? "✓" : "○")</span> Complete
+                                    Complete
                                 </div>
                             </div>
 
