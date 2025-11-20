@@ -53,7 +53,7 @@ JavaScript (for interactivity)
 MSSQL ( for Database)
 
 -- Links
-https://youtu.be/BBl1y7DblsQ
+https://youtu.be/ytxJvjcDKic
 
 xUnit for unit testing
 
