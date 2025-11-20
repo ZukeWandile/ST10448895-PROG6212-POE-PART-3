@@ -58,7 +58,12 @@ GOOGLE DRIVE LINK OF FOLDER CONTAINING POWERPOINT, SQL
 https://drive.google.com/drive/folders/19LOhqDAPkubc8LuZ6-L2XEjU4KGF0afk?usp=sharing
 
 xUnit for unit testing - based on Part 2 not configured for part3
-
+--
+login details 
+HR- admin(username), Admin123!(password)
+Lecturer- Bolt(username), Lecturer123!(password)
+Coordinator- Poki(username) ,Coord123!( password)
+Manager- Titan (username), Manager123!(password)
 --Authors
 
 Developed by ST10448895 as part of the academic project for the Contract Monthly Claim System.
