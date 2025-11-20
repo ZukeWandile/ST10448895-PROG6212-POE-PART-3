@@ -57,7 +57,7 @@ https://youtu.be/ytxJvjcDKic
 GOOGLE DRIVE LINK OF FOLDER CONTAINING POWERPOINT, SQL
 https://drive.google.com/drive/folders/19LOhqDAPkubc8LuZ6-L2XEjU4KGF0afk?usp=sharing
 
-xUnit for unit testing
+xUnit for unit testing - based on Part 2 not configured for part3
 
 --Authors
 
