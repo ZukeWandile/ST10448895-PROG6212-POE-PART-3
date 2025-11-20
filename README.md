@@ -5,7 +5,7 @@ Contract Monthly Claim System (CMCS) is a web-based ASP.NET Core MVC application
 --Features
  Role-Based Access Control
 
-Distinct dashboards for Lecturers, Coordinators, and Managers
+Distinct dashboards for Lecturers, Coordinators, Managers and HR
 
 Role permissions determine access to specific functionality and views
 
@@ -14,6 +14,7 @@ Role permissions determine access to specific functionality and views
 Lecturers can create and submit claims
 
 Each claim includes hours worked, hourly rates, and total calculations
+The hourly rate and modules is set by the HR
 
 -- Document Uploads
 
@@ -31,17 +32,13 @@ Coordinator Verification — ensures validity of claims
 
 Manager Approval — final authorization before processing
 
+HR Creates all Users, assignes modules to Lecturers and can download/view all claims made
+
 Status Tracking
 
 Real-time updates showing claim progress:
 
-Submitted → Verified → Approved → Rejected
-
- --Current Limitations
-
-All data is currently hardcoded for testing and demonstration purposes
-
-No database integration yet (future update will implement EF Core with SQL Server)
+Submitted -> Verified -> Approved > Rejected
 
 
 -- Technologies Used
@@ -50,9 +47,10 @@ ASP.NET Core MVC (C#)
 
 Entity Framework Core (planned)
 
-HTML5, CSS3, Bootstrap
+HTML5, CSS3
 
 JavaScript (for interactivity)
+MSSQL ( for Database)
 
 -- Links
 https://youtu.be/BBl1y7DblsQ
